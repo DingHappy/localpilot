@@ -40,6 +40,79 @@ class StreamSample:
         return (self.output_tokens - 1) / (self.decode_ms / 1000)
 
 
+def _distinct_prompts(
+    prompts: List[Dict[str, Any]], concurrency: int
+) -> List[str]:
+    """Builds `concurrency` prompts that do not share a full prefix.
+
+    Rotating the task's own prompts keeps the load realistic. When more
+    streams are asked for than there are prompts, a trailing marker
+    differentiates the reused ones: concurrent users share a system prefix
+    but not an entire request, and a benchmark that lets them share
+    everything measures the prefix cache.
+    """
+    texts = [prompt["text"] for prompt in prompts] or [""]
+    built = []
+    for index in range(max(1, concurrency)):
+        text = texts[index % len(texts)]
+        repeat = index // len(texts)
+        if repeat:
+            text = f"{text}\n\n(request variant {repeat + 1})"
+        built.append(text)
+    return built
+
+
+class MemorySampler:
+    """Polls accelerator memory in the background and keeps the maximum.
+
+    The engine runs in its own process, so this process's RSS is
+    irrelevant. On a unified-memory machine the accelerator reading is the
+    figure that matters, and it has to be taken while the work is running.
+    """
+
+    INTERVAL_SECONDS = 0.25
+
+    def __init__(self) -> None:
+        self.peak_gb: Optional[float] = None
+        self.samples = 0
+        self._stop = threading.Event()
+        self._thread: Optional[threading.Thread] = None
+
+    def _read_gb(self) -> Optional[float]:
+        try:
+            import pynvml
+
+            pynvml.nvmlInit()
+            try:
+                handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+                return pynvml.nvmlDeviceGetMemoryInfo(handle).used / (1024**3)
+            finally:
+                pynvml.nvmlShutdown()
+        except Exception:
+            return None
+
+    def _run(self) -> None:
+        while not self._stop.is_set():
+            value = self._read_gb()
+            if value is not None:
+                self.samples += 1
+                if self.peak_gb is None or value > self.peak_gb:
+                    self.peak_gb = value
+            self._stop.wait(self.INTERVAL_SECONDS)
+
+    def start(self) -> None:
+        if self._read_gb() is None:
+            return
+        self._thread = threading.Thread(target=self._run, daemon=True)
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=2.0)
+            self._thread = None
+
+
 def _percentile(values: List[float], fraction: float) -> Optional[float]:
     if not values:
         return None
@@ -355,12 +428,21 @@ class OpenAICompatRuntime(RuntimeProvider):
         )
 
     def _stream_concurrent(
-        self, prompt: str, max_new_tokens: int, concurrency: int
+        self, prompts: List[str], max_new_tokens: int
     ) -> Tuple[List[StreamSample], float]:
+        """Runs one request per prompt at the same time.
+
+        The prompts must differ. Firing the identical request N times at a
+        server with prefix caching on measures the cache, not the engine:
+        every stream after the first skips prefill entirely, and the
+        aggregate figure comes out far above what real concurrent users
+        would see.
+        """
+        concurrency = len(prompts)
         samples: List[Optional[StreamSample]] = [None] * concurrency
 
         def worker(slot: int) -> None:
-            samples[slot] = self._stream_once(prompt, max_new_tokens)
+            samples[slot] = self._stream_once(prompts[slot], max_new_tokens)
 
         threads = [
             threading.Thread(target=worker, args=(slot,), daemon=True)
@@ -389,23 +471,33 @@ class OpenAICompatRuntime(RuntimeProvider):
 
         primary = prompts[0]["text"]
         concurrency = max(1, self.candidate.concurrency)
+        batch_prompts = _distinct_prompts(prompts, concurrency)
 
         for _ in range(max(0, warmup_runs)):
             self._stream_once(primary, max_new_tokens)
 
+        # Sample accelerator memory while generation is in flight. Reading it
+        # once at the end reports whatever is resident after the work is
+        # done, which is not the peak the configuration actually needed.
+        sampler = MemorySampler()
+        sampler.start()
+
         all_samples: List[StreamSample] = []
         wall_times: List[float] = []
-        for _ in range(max(1, measured_runs)):
-            if concurrency == 1:
-                sample = self._stream_once(primary, max_new_tokens)
-                all_samples.append(sample)
-                wall_times.append(sample.total_ms)
-            else:
-                batch, wall_ms = self._stream_concurrent(
-                    primary, max_new_tokens, concurrency
-                )
-                all_samples.extend(batch)
-                wall_times.append(wall_ms)
+        try:
+            for _ in range(max(1, measured_runs)):
+                if concurrency == 1:
+                    sample = self._stream_once(primary, max_new_tokens)
+                    all_samples.append(sample)
+                    wall_times.append(sample.total_ms)
+                else:
+                    batch, wall_ms = self._stream_concurrent(
+                        batch_prompts, max_new_tokens
+                    )
+                    all_samples.extend(batch)
+                    wall_times.append(wall_ms)
+        finally:
+            sampler.stop()
 
         successes = [sample for sample in all_samples if sample.ok]
         if not successes:
@@ -440,7 +532,7 @@ class OpenAICompatRuntime(RuntimeProvider):
                 quality_hits += 1
         keyword_quality = quality_hits / max(1, len(prompts))
 
-        peak_memory_gb, cpu_percent = self._resource_usage()
+        peak_memory_gb, cpu_percent, memory_source = self._resource_usage(sampler)
 
         return BenchmarkMetrics(
             ttft_ms=round(mean(ttfts), 2),
@@ -461,6 +553,8 @@ class OpenAICompatRuntime(RuntimeProvider):
                 "requests": len(all_samples),
                 "output_tokens_total": tokens_total,
                 "launch_command": self.launch_command,
+                "peak_memory_source": memory_source,
+                "distinct_prompts": len(set(batch_prompts)),
             },
             ttft_p95_ms=(
                 round(_percentile(ttfts, 0.95), 2)
@@ -472,34 +566,35 @@ class OpenAICompatRuntime(RuntimeProvider):
             quality_keyword=round(keyword_quality, 3),
         )
 
-    def _resource_usage(self) -> Tuple[float, Optional[float]]:
-        """Reports accelerator memory, falling back to the host view.
+    def _resource_usage(
+        self, sampler: "MemorySampler"
+    ) -> Tuple[float, Optional[float], str]:
+        """The observed memory peak, or an honest label saying it is not one.
 
-        The engine runs in its own process, so this process's RSS says
-        nothing. On a unified-memory machine the accelerator reading is the
-        one that matters anyway.
+        Falling back to the planner's estimate is unavoidable without NVML,
+        but it must not be passed off as an observation, so the source
+        travels with the number.
         """
-        try:
-            import pynvml
+        if sampler.peak_gb is not None:
+            return (
+                sampler.peak_gb,
+                self._cpu_percent(),
+                f"nvml_peak_over_{sampler.samples}_samples",
+            )
+        return (
+            float(self.candidate.expected_memory_gb),
+            self._cpu_percent(),
+            "planner_estimate_nvml_unavailable",
+        )
 
-            pynvml.nvmlInit()
-            try:
-                handle = pynvml.nvmlDeviceGetHandleByIndex(0)
-                info = pynvml.nvmlDeviceGetMemoryInfo(handle)
-                used_gb = info.used / (1024**3)
-            finally:
-                pynvml.nvmlShutdown()
-        except Exception:
-            used_gb = float(self.candidate.expected_memory_gb)
-
-        cpu_percent = None
+    @staticmethod
+    def _cpu_percent() -> Optional[float]:
         try:
             import psutil
 
-            cpu_percent = float(psutil.cpu_percent(interval=0.1))
+            return float(psutil.cpu_percent(interval=0.1))
         except ImportError:
-            pass
-        return used_gb, cpu_percent
+            return None
 
 
 class VLLMRuntime(OpenAICompatRuntime):

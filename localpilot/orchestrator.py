@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 from localpilot.agents.bench_agent import BenchAgent
 from localpilot.agents.judge_agent import JudgeAgent
@@ -76,7 +76,14 @@ class Orchestrator:
         text: str,
         mode: str = "auto",
         reuse_profile: bool = True,
+        progress: Callable[[AgentStep], None] = None,
     ) -> AutopilotResult:
+        """Runs the loop.
+
+        ``progress`` receives every agent step as it happens. A real search
+        takes minutes, so a caller that only gets the final result has
+        nothing to show for most of the run.
+        """
         run_id = str(uuid.uuid4())
         started_at = utc_now()
         intent = parse_intent(text)
@@ -92,11 +99,28 @@ class Orchestrator:
             )
 
         trace: List[AgentStep] = []
+
+        def emit(step: AgentStep) -> AgentStep:
+            trace.append(step)
+            if progress is not None:
+                try:
+                    progress(step)
+                except Exception:
+                    pass
+            return step
+
         models = self.registry.for_task(intent.task)
 
         if reuse_profile:
             reused = self._try_reuse(
-                run_id, intent, hardware, simulated, warnings, started_at, trace
+                run_id,
+                intent,
+                hardware,
+                simulated,
+                warnings,
+                started_at,
+                trace,
+                emit,
             )
             if reused is not None:
                 return reused
@@ -108,18 +132,16 @@ class Orchestrator:
             planner=self.planner,
             quality_evaluator=judge.evaluate,
         )
+        for agent in (planner_agent, bench_agent, judge):
+            agent.sink = emit
 
         candidates = planner_agent.propose(intent, hardware, models, resolved_mode)
-        trace.extend(planner_agent.drain())
-
         results = bench_agent.measure(
             candidates, intent.task, resolved_mode, hardware, models
         )
-        trace.extend(bench_agent.drain())
-        trace.extend(judge.drain())
 
         best = self.optimizer.choose(results, intent.priority)
-        trace.append(
+        emit(
             AgentStep(
                 agent="optimizer",
                 action="rank_candidates",
@@ -147,7 +169,7 @@ class Orchestrator:
         profile = self._save_profile(
             intent, hardware, best, resolved_mode, simulated
         )
-        trace.append(
+        emit(
             AgentStep(
                 agent="memory",
                 action="save_profile",
@@ -197,6 +219,7 @@ class Orchestrator:
         warnings: List[str],
         started_at: str,
         trace: List[AgentStep],
+        emit: Callable[[AgentStep], AgentStep],
     ) -> Optional[AutopilotResult]:
         cached = self.store.find_match(
             hardware.fingerprint, intent.task, intent.priority, simulated
@@ -204,7 +227,7 @@ class Orchestrator:
         if cached is None:
             return None
         if not self._verify_cached(cached):
-            trace.append(
+            emit(
                 AgentStep(
                     agent="memory",
                     action="profile_rejected",
@@ -229,7 +252,7 @@ class Orchestrator:
             benchmark=cached.benchmark,
             score=cached.score,
         )
-        trace.append(
+        emit(
             AgentStep(
                 agent="memory",
                 action="profile_reused",

@@ -1,7 +1,7 @@
 {
   "warmup_runs": 1,
   "measured_runs": 3,
-  "max_new_tokens": 64,
+  "max_new_tokens": 256,
   "_note": "expected_terms drives the keyword signal only. It is a weak signal on purpose -- 'this has no race condition' contains the word 'race' -- which is why the judge agent grades the same answers against a rubric and the two are blended.",
   "prompts": [
     {
@@ -114,5 +114,6 @@
       "mock_answer": "The capital of France is Paris."
     }
   ],
-  "_mock_answers": "mock_answer is the canned reply MockRuntime returns for that prompt. It lives here rather than in code so the fabricated part of a simulated run is declared in configuration and visible in review. No real runtime reads this field."
+  "_mock_answers": "mock_answer is the canned reply MockRuntime returns for that prompt. It lives here rather than in code so the fabricated part of a simulated run is declared in configuration and visible in review. No real runtime reads this field.",
+  "_measurement_note": "max_new_tokens has to be long enough that the decode rate is not dominated by time-to-first-token. At 64 tokens a ~60 ms TTFT is over a tenth of the measurement and the rate is estimated from 63 samples. 256 keeps a run cheap while making the decode figure the thing being measured. warmup_runs exists because the first request pays for graph capture and cache warmup."
 }

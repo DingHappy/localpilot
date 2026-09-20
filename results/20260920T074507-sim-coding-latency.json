@@ -1,0 +1,1280 @@
+{
+  "agent_trace": [
+    {
+      "action": "read_hardware",
+      "agent": "planner",
+      "data": {
+        "engines_available": [
+          "llamacpp",
+          "nim",
+          "sglang",
+          "transformers",
+          "trtllm",
+          "vllm"
+        ],
+        "platform_id": "dgx_spark",
+        "simulated": true,
+        "unified_memory": true
+      },
+      "detail": "dgx_spark: 128.0 GB unified, 273 GB/s",
+      "status": "success"
+    },
+    {
+      "action": "reject_model",
+      "agent": "planner",
+      "data": {
+        "gate": "memory",
+        "model_id": "nemotron-3-ultra-550b-a55b-nvfp4",
+        "reason": "needs 348.0 GB but only 102.4 GB is safely available (328.1 GB weights + 0.2 GB KV at 8192 tokens x1)",
+        "source_id": "nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4"
+      },
+      "detail": "nemotron-3-ultra-550b-a55b-nvfp4: needs 348.0 GB but only 102.4 GB is safely available (328.1 GB weights + 0.2 GB KV at 8192 tokens x1)",
+      "status": "rejected"
+    },
+    {
+      "action": "propose_candidate",
+      "agent": "planner",
+      "data": {
+        "candidate_id": "nemotron-3.5-lightning-30b-a3b-nvfp4-trtllm-nvfp4-spec",
+        "concurrency": 1,
+        "context_length": 8192,
+        "engine": "trtllm",
+        "expected_memory_gb": 22.98,
+        "precision": "NVFP4",
+        "roofline_decode_tokens_s": 121.3,
+        "speculative_decoding": true
+      },
+      "detail": "TensorRT-LLM ranks #1 for latency; 3B of 30B parameters are read per token; speculative decoding trades compute for bandwidth; 23.0 GB of a 102.4 GB budget",
+      "status": "success"
+    },
+    {
+      "action": "propose_candidate",
+      "agent": "planner",
+      "data": {
+        "candidate_id": "nemotron-3-nano-30b-a3b-nvfp4-trtllm-nvfp4",
+        "concurrency": 1,
+        "context_length": 8192,
+        "engine": "trtllm",
+        "expected_memory_gb": 19.62,
+        "precision": "NVFP4",
+        "roofline_decode_tokens_s": 121.3,
+        "speculative_decoding": false
+      },
+      "detail": "TensorRT-LLM ranks #1 for latency; 3B of 30B parameters are read per token; 19.6 GB of a 102.4 GB budget",
+      "status": "success"
+    },
+    {
+      "action": "propose_candidate",
+      "agent": "planner",
+      "data": {
+        "candidate_id": "nemotron-3-super-120b-a12b-nvfp4-trtllm-nvfp4",
+        "concurrency": 1,
+        "context_length": 8192,
+        "engine": "trtllm",
+        "expected_memory_gb": 79.46,
+        "precision": "NVFP4",
+        "roofline_decode_tokens_s": 30.3,
+        "speculative_decoding": false
+      },
+      "detail": "TensorRT-LLM ranks #1 for latency; 12B of 120B parameters are read per token; 79.5 GB of a 102.4 GB budget",
+      "status": "success"
+    },
+    {
+      "action": "propose_candidate",
+      "agent": "planner",
+      "data": {
+        "candidate_id": "nemotron-3.5-lightning-30b-a3b-bf16-vllm-bf16",
+        "concurrency": 1,
+        "context_length": 8192,
+        "engine": "vllm",
+        "expected_memory_gb": 65.1,
+        "precision": "BF16",
+        "roofline_decode_tokens_s": 34.1,
+        "speculative_decoding": false
+      },
+      "detail": "vLLM ranks #2 for latency; 3B of 30B parameters are read per token; 65.1 GB of a 102.4 GB budget",
+      "status": "success"
+    },
+    {
+      "action": "plan_complete",
+      "agent": "planner",
+      "data": {},
+      "detail": "4 candidates across 4 models and 2 engines",
+      "status": "success"
+    },
+    {
+      "action": "grade_candidate",
+      "agent": "judge",
+      "data": {
+        "blended": 0.911,
+        "candidate_id": "nemotron-3.5-lightning-30b-a3b-nvfp4-trtllm-nvfp4-spec",
+        "graded": 3,
+        "judge": 0.851,
+        "keyword": 1.0
+      },
+      "detail": "nemotron-3.5-lightning-30b-a3b-nvfp4-trtllm-nvfp4-spec: keyword 1.00, rubric 0.85, blended 0.91",
+      "status": "success"
+    },
+    {
+      "action": "grade_candidate",
+      "agent": "judge",
+      "data": {
+        "blended": 0.911,
+        "candidate_id": "nemotron-3-nano-30b-a3b-nvfp4-trtllm-nvfp4",
+        "graded": 3,
+        "judge": 0.851,
+        "keyword": 1.0
+      },
+      "detail": "nemotron-3-nano-30b-a3b-nvfp4-trtllm-nvfp4: keyword 1.00, rubric 0.85, blended 0.91",
+      "status": "success"
+    },
+    {
+      "action": "grade_candidate",
+      "agent": "judge",
+      "data": {
+        "blended": 0.911,
+        "candidate_id": "nemotron-3-super-120b-a12b-nvfp4-trtllm-nvfp4",
+        "graded": 3,
+        "judge": 0.851,
+        "keyword": 1.0
+      },
+      "detail": "nemotron-3-super-120b-a12b-nvfp4-trtllm-nvfp4: keyword 1.00, rubric 0.85, blended 0.91",
+      "status": "success"
+    },
+    {
+      "action": "grade_candidate",
+      "agent": "judge",
+      "data": {
+        "blended": 0.911,
+        "candidate_id": "nemotron-3.5-lightning-30b-a3b-bf16-vllm-bf16",
+        "graded": 3,
+        "judge": 0.851,
+        "keyword": 1.0
+      },
+      "detail": "nemotron-3.5-lightning-30b-a3b-bf16-vllm-bf16: keyword 1.00, rubric 0.85, blended 0.91",
+      "status": "success"
+    },
+    {
+      "action": "measure_candidate",
+      "agent": "bench",
+      "data": {
+        "aggregate_throughput_tokens_s": 217.78,
+        "candidate_id": "nemotron-3.5-lightning-30b-a3b-nvfp4-trtllm-nvfp4-spec",
+        "peak_memory_gb": 23.73,
+        "quality": 0.911,
+        "simulated": true,
+        "throughput_tokens_s": 215.42,
+        "ttft_ms": 63.21
+      },
+      "detail": "nemotron-3.5-lightning-30b-a3b-nvfp4-trtllm-nvfp4-spec: TTFT 63 ms, 215.4 tok/s/stream, 23.7 GB peak, 217.8 tok/s aggregate",
+      "status": "success"
+    },
+    {
+      "action": "measure_candidate",
+      "agent": "bench",
+      "data": {
+        "aggregate_throughput_tokens_s": 120.99,
+        "candidate_id": "nemotron-3-nano-30b-a3b-nvfp4-trtllm-nvfp4",
+        "peak_memory_gb": 20.36,
+        "quality": 0.911,
+        "simulated": true,
+        "throughput_tokens_s": 121.81,
+        "ttft_ms": 62.07
+      },
+      "detail": "nemotron-3-nano-30b-a3b-nvfp4-trtllm-nvfp4: TTFT 62 ms, 121.8 tok/s/stream, 20.4 GB peak, 121.0 tok/s aggregate",
+      "status": "success"
+    },
+    {
+      "action": "measure_candidate",
+      "agent": "bench",
+      "data": {
+        "aggregate_throughput_tokens_s": 30.25,
+        "candidate_id": "nemotron-3-super-120b-a12b-nvfp4-trtllm-nvfp4",
+        "peak_memory_gb": 82.64,
+        "quality": 0.911,
+        "simulated": true,
+        "throughput_tokens_s": 30.17,
+        "ttft_ms": 62.65
+      },
+      "detail": "nemotron-3-super-120b-a12b-nvfp4-trtllm-nvfp4: TTFT 63 ms, 30.2 tok/s/stream, 82.6 GB peak, 30.2 tok/s aggregate",
+      "status": "success"
+    },
+    {
+      "action": "measure_candidate",
+      "agent": "bench",
+      "data": {
+        "aggregate_throughput_tokens_s": 31.65,
+        "candidate_id": "nemotron-3.5-lightning-30b-a3b-bf16-vllm-bf16",
+        "peak_memory_gb": 68.62,
+        "quality": 0.911,
+        "simulated": true,
+        "throughput_tokens_s": 31.49,
+        "ttft_ms": 76.4
+      },
+      "detail": "nemotron-3.5-lightning-30b-a3b-bf16-vllm-bf16: TTFT 76 ms, 31.5 tok/s/stream, 68.6 GB peak, 31.6 tok/s aggregate",
+      "status": "success"
+    },
+    {
+      "action": "rank_candidates",
+      "agent": "optimizer",
+      "data": {
+        "components": {
+          "latency": 0.9204,
+          "memory": 0.9459,
+          "quality": 1.0,
+          "stability": 1.0,
+          "throughput": 1.0
+        },
+        "ranking": [
+          {
+            "candidate_id": "nemotron-3.5-lightning-30b-a3b-nvfp4-trtllm-nvfp4-spec",
+            "gate_failures": [],
+            "score": 96.67
+          },
+          {
+            "candidate_id": "nemotron-3-nano-30b-a3b-nvfp4-trtllm-nvfp4",
+            "gate_failures": [],
+            "score": 84.84
+          },
+          {
+            "candidate_id": "nemotron-3-super-120b-a12b-nvfp4-trtllm-nvfp4",
+            "gate_failures": [],
+            "score": 58.58
+          },
+          {
+            "candidate_id": "nemotron-3.5-lightning-30b-a3b-bf16-vllm-bf16",
+            "gate_failures": [],
+            "score": 27.46
+          }
+        ],
+        "score": 96.67,
+        "winner": "nemotron-3.5-lightning-30b-a3b-nvfp4-trtllm-nvfp4-spec"
+      },
+      "detail": "nemotron-3.5-lightning-30b-a3b-nvfp4-trtllm-nvfp4-spec wins with 96.67/100 under priority 'latency'",
+      "status": "success"
+    },
+    {
+      "action": "save_profile",
+      "agent": "memory",
+      "data": {
+        "profile_key": "2d6e0bc8f27848f9e685"
+      },
+      "detail": "Profile 2d6e0bc8f27848f9e685 stored for coding/latency on this fingerprint",
+      "status": "success"
+    }
+  ],
+  "best_profile": {
+    "benchmark": {
+      "aggregate_throughput_tokens_s": 217.78,
+      "bandwidth_utilization": 1.346,
+      "concurrency": 1,
+      "cpu_usage_percent": null,
+      "decode_bandwidth_gbps": 367.5,
+      "peak_memory_gb": 23.73,
+      "quality": 0.911,
+      "quality_judge": 0.851,
+      "quality_keyword": 1.0,
+      "raw": {
+        "assumed_bandwidth_gbps": 273.0,
+        "engine_modelled": "trtllm",
+        "label": "SIMULATED_NOT_A_HARDWARE_BENCHMARK",
+        "model": "roofline: bandwidth / active bytes per token",
+        "quality_detail": "rubric grading applied",
+        "quality_samples": [
+          {
+            "answer": "The file handle is never closed. Use a with statement so it is released even if read() raises.",
+            "expected_terms": [
+              "close",
+              "with",
+              "context manager"
+            ],
+            "judge": {
+              "actionability": 0.9,
+              "completeness": 0.72,
+              "correctness": 1.0,
+              "note": "simulated rubric",
+              "score": 0.873,
+              "source": "simulated"
+            },
+            "keyword_hit": true,
+            "prompt_id": "python-resource-review"
+          },
+          {
+            "answer": "This concatenates user input into SQL, which is an injection vulnerability. Use a parameterized query instead.",
+            "expected_terms": [
+              "injection",
+              "parameter"
+            ],
+            "judge": {
+              "actionability": 0.9,
+              "completeness": 0.64,
+              "correctness": 1.0,
+              "note": "simulated rubric",
+              "score": 0.847,
+              "source": "simulated"
+            },
+            "keyword_hit": true,
+            "prompt_id": "sql-injection-review"
+          },
+          {
+            "answer": "Two threads incrementing without synchronization is a race condition. Guard the counter with a lock.",
+            "expected_terms": [
+              "race",
+              "lock",
+              "synchron"
+            ],
+            "judge": {
+              "actionability": 0.9,
+              "completeness": 0.6,
+              "correctness": 1.0,
+              "note": "simulated rubric",
+              "score": 0.833,
+              "source": "simulated"
+            },
+            "keyword_hit": true,
+            "prompt_id": "race-condition-review"
+          }
+        ]
+      },
+      "runs": 3,
+      "simulated": true,
+      "stability": 1.0,
+      "throughput_tokens_s": 215.42,
+      "total_latency_ms": 1252.78,
+      "tpot_ms": 4.64,
+      "ttft_ms": 63.21,
+      "ttft_p95_ms": 64.76,
+      "warmup_runs": 1
+    },
+    "candidate": {
+      "active_parameter_count_b": 3.0,
+      "candidate_id": "nemotron-3.5-lightning-30b-a3b-nvfp4-trtllm-nvfp4-spec",
+      "concurrency": 1,
+      "confidence": 0.77,
+      "context_length": 8192,
+      "device": "CUDA",
+      "engine": "trtllm",
+      "expected_memory_gb": 22.98,
+      "fallback_of": null,
+      "knobs": {
+        "concurrency": 1,
+        "enable_prefix_caching": true,
+        "gpu_memory_utilization": 0.9,
+        "kv_cache_dtype": "auto",
+        "max_num_seqs": 1,
+        "num_speculative_tokens": 3,
+        "speculative_decoding": true
+      },
+      "kv_cache_dtype": "auto",
+      "memory_estimate": {
+        "activation_overhead_gb": 1.5,
+        "budget_gb": 102.4,
+        "detail": "23.0 GB of a 102.4 GB budget",
+        "fits": true,
+        "kv_cache_gb": 0.11,
+        "total_gb": 22.98,
+        "weights_gb": 21.37
+      },
+      "model_id": "nemotron-3.5-lightning-30b-a3b-nvfp4",
+      "model_path": null,
+      "parameter_count_b": 30.0,
+      "precision": "NVFP4",
+      "quality_score": 0.88,
+      "reason": "TensorRT-LLM ranks #1 for latency; 3B of 30B parameters are read per token; speculative decoding trades compute for bandwidth; 23.0 GB of a 102.4 GB budget",
+      "recovery_action": null,
+      "runtime": "mock",
+      "runtime_config": {
+        "enable_prefix_caching": true,
+        "gpu_memory_utilization": 0.9,
+        "kv_cache_dtype": "auto",
+        "max_num_seqs": 1,
+        "speculative": {
+          "draft_source_id": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4-DSpark",
+          "num_speculative_tokens": 3
+        }
+      },
+      "simulated": true,
+      "source_id": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4"
+    },
+    "created_at": "2026-09-20T07:45:07.636566+00:00",
+    "hardware_fingerprint": "7fac0589d0093e6ffa8aececb95168cbb552d8fee0fd23f804a5143469b1fe05",
+    "last_verified_at": "2026-09-20T07:45:07.636566+00:00",
+    "platform_id": "dgx_spark",
+    "priority": "latency",
+    "profile_key": "2d6e0bc8f27848f9e685",
+    "runtime_versions": {
+      "cuda": null,
+      "driver": null,
+      "engine": "trtllm",
+      "platform": "dgx_spark",
+      "runtime": "mock"
+    },
+    "score": 96.67,
+    "simulated": true,
+    "task": "coding"
+  },
+  "candidates": [
+    {
+      "benchmark": {
+        "aggregate_throughput_tokens_s": 217.78,
+        "bandwidth_utilization": 1.346,
+        "concurrency": 1,
+        "cpu_usage_percent": null,
+        "decode_bandwidth_gbps": 367.5,
+        "peak_memory_gb": 23.73,
+        "quality": 0.911,
+        "quality_judge": 0.851,
+        "quality_keyword": 1.0,
+        "raw": {
+          "assumed_bandwidth_gbps": 273.0,
+          "engine_modelled": "trtllm",
+          "label": "SIMULATED_NOT_A_HARDWARE_BENCHMARK",
+          "model": "roofline: bandwidth / active bytes per token",
+          "quality_detail": "rubric grading applied",
+          "quality_samples": [
+            {
+              "answer": "The file handle is never closed. Use a with statement so it is released even if read() raises.",
+              "expected_terms": [
+                "close",
+                "with",
+                "context manager"
+              ],
+              "judge": {
+                "actionability": 0.9,
+                "completeness": 0.72,
+                "correctness": 1.0,
+                "note": "simulated rubric",
+                "score": 0.873,
+                "source": "simulated"
+              },
+              "keyword_hit": true,
+              "prompt_id": "python-resource-review"
+            },
+            {
+              "answer": "This concatenates user input into SQL, which is an injection vulnerability. Use a parameterized query instead.",
+              "expected_terms": [
+                "injection",
+                "parameter"
+              ],
+              "judge": {
+                "actionability": 0.9,
+                "completeness": 0.64,
+                "correctness": 1.0,
+                "note": "simulated rubric",
+                "score": 0.847,
+                "source": "simulated"
+              },
+              "keyword_hit": true,
+              "prompt_id": "sql-injection-review"
+            },
+            {
+              "answer": "Two threads incrementing without synchronization is a race condition. Guard the counter with a lock.",
+              "expected_terms": [
+                "race",
+                "lock",
+                "synchron"
+              ],
+              "judge": {
+                "actionability": 0.9,
+                "completeness": 0.6,
+                "correctness": 1.0,
+                "note": "simulated rubric",
+                "score": 0.833,
+                "source": "simulated"
+              },
+              "keyword_hit": true,
+              "prompt_id": "race-condition-review"
+            }
+          ]
+        },
+        "runs": 3,
+        "simulated": true,
+        "stability": 1.0,
+        "throughput_tokens_s": 215.42,
+        "total_latency_ms": 1252.78,
+        "tpot_ms": 4.64,
+        "ttft_ms": 63.21,
+        "ttft_p95_ms": 64.76,
+        "warmup_runs": 1
+      },
+      "candidate": {
+        "active_parameter_count_b": 3.0,
+        "candidate_id": "nemotron-3.5-lightning-30b-a3b-nvfp4-trtllm-nvfp4-spec",
+        "concurrency": 1,
+        "confidence": 0.77,
+        "context_length": 8192,
+        "device": "CUDA",
+        "engine": "trtllm",
+        "expected_memory_gb": 22.98,
+        "fallback_of": null,
+        "knobs": {
+          "concurrency": 1,
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.9,
+          "kv_cache_dtype": "auto",
+          "max_num_seqs": 1,
+          "num_speculative_tokens": 3,
+          "speculative_decoding": true
+        },
+        "kv_cache_dtype": "auto",
+        "memory_estimate": {
+          "activation_overhead_gb": 1.5,
+          "budget_gb": 102.4,
+          "detail": "23.0 GB of a 102.4 GB budget",
+          "fits": true,
+          "kv_cache_gb": 0.11,
+          "total_gb": 22.98,
+          "weights_gb": 21.37
+        },
+        "model_id": "nemotron-3.5-lightning-30b-a3b-nvfp4",
+        "model_path": null,
+        "parameter_count_b": 30.0,
+        "precision": "NVFP4",
+        "quality_score": 0.88,
+        "reason": "TensorRT-LLM ranks #1 for latency; 3B of 30B parameters are read per token; speculative decoding trades compute for bandwidth; 23.0 GB of a 102.4 GB budget",
+        "recovery_action": null,
+        "runtime": "mock",
+        "runtime_config": {
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.9,
+          "kv_cache_dtype": "auto",
+          "max_num_seqs": 1,
+          "speculative": {
+            "draft_source_id": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4-DSpark",
+            "num_speculative_tokens": 3
+          }
+        },
+        "simulated": true,
+        "source_id": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4"
+      },
+      "error": null,
+      "gate_failures": [],
+      "score": 96.67,
+      "score_components": {
+        "latency": 0.9204,
+        "memory": 0.9459,
+        "quality": 1.0,
+        "stability": 1.0,
+        "throughput": 1.0
+      },
+      "status": "success",
+      "steps": [
+        {
+          "message": "",
+          "name": "environment_check",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "model_load",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "model_start",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "health_check",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "benchmark",
+          "status": "success"
+        },
+        {
+          "message": "rubric grading applied",
+          "name": "quality_grading",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "benchmark": {
+        "aggregate_throughput_tokens_s": 120.99,
+        "bandwidth_utilization": 0.748,
+        "concurrency": 1,
+        "cpu_usage_percent": null,
+        "decode_bandwidth_gbps": 204.16,
+        "peak_memory_gb": 20.36,
+        "quality": 0.911,
+        "quality_judge": 0.851,
+        "quality_keyword": 1.0,
+        "raw": {
+          "assumed_bandwidth_gbps": 273.0,
+          "engine_modelled": "trtllm",
+          "label": "SIMULATED_NOT_A_HARDWARE_BENCHMARK",
+          "model": "roofline: bandwidth / active bytes per token",
+          "quality_detail": "rubric grading applied",
+          "quality_samples": [
+            {
+              "answer": "The file handle is never closed. Use a with statement so it is released even if read() raises.",
+              "expected_terms": [
+                "close",
+                "with",
+                "context manager"
+              ],
+              "judge": {
+                "actionability": 0.9,
+                "completeness": 0.72,
+                "correctness": 1.0,
+                "note": "simulated rubric",
+                "score": 0.873,
+                "source": "simulated"
+              },
+              "keyword_hit": true,
+              "prompt_id": "python-resource-review"
+            },
+            {
+              "answer": "This concatenates user input into SQL, which is an injection vulnerability. Use a parameterized query instead.",
+              "expected_terms": [
+                "injection",
+                "parameter"
+              ],
+              "judge": {
+                "actionability": 0.9,
+                "completeness": 0.64,
+                "correctness": 1.0,
+                "note": "simulated rubric",
+                "score": 0.847,
+                "source": "simulated"
+              },
+              "keyword_hit": true,
+              "prompt_id": "sql-injection-review"
+            },
+            {
+              "answer": "Two threads incrementing without synchronization is a race condition. Guard the counter with a lock.",
+              "expected_terms": [
+                "race",
+                "lock",
+                "synchron"
+              ],
+              "judge": {
+                "actionability": 0.9,
+                "completeness": 0.6,
+                "correctness": 1.0,
+                "note": "simulated rubric",
+                "score": 0.833,
+                "source": "simulated"
+              },
+              "keyword_hit": true,
+              "prompt_id": "race-condition-review"
+            }
+          ]
+        },
+        "runs": 3,
+        "simulated": true,
+        "stability": 1.0,
+        "throughput_tokens_s": 121.81,
+        "total_latency_ms": 2164.76,
+        "tpot_ms": 8.21,
+        "ttft_ms": 62.07,
+        "ttft_p95_ms": 63.73,
+        "warmup_runs": 1
+      },
+      "candidate": {
+        "active_parameter_count_b": 3.0,
+        "candidate_id": "nemotron-3-nano-30b-a3b-nvfp4-trtllm-nvfp4",
+        "concurrency": 1,
+        "confidence": 0.85,
+        "context_length": 8192,
+        "device": "CUDA",
+        "engine": "trtllm",
+        "expected_memory_gb": 19.62,
+        "fallback_of": null,
+        "knobs": {
+          "concurrency": 1,
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.9,
+          "kv_cache_dtype": "auto",
+          "max_num_seqs": 1,
+          "num_speculative_tokens": 3,
+          "speculative_decoding": false
+        },
+        "kv_cache_dtype": "auto",
+        "memory_estimate": {
+          "activation_overhead_gb": 1.5,
+          "budget_gb": 102.4,
+          "detail": "19.6 GB of a 102.4 GB budget",
+          "fits": true,
+          "kv_cache_gb": 0.11,
+          "total_gb": 19.62,
+          "weights_gb": 18.01
+        },
+        "model_id": "nemotron-3-nano-30b-a3b-nvfp4",
+        "model_path": null,
+        "parameter_count_b": 30.0,
+        "precision": "NVFP4",
+        "quality_score": 0.84,
+        "reason": "TensorRT-LLM ranks #1 for latency; 3B of 30B parameters are read per token; 19.6 GB of a 102.4 GB budget",
+        "recovery_action": null,
+        "runtime": "mock",
+        "runtime_config": {
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.9,
+          "kv_cache_dtype": "auto",
+          "max_num_seqs": 1
+        },
+        "simulated": true,
+        "source_id": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4"
+      },
+      "error": null,
+      "gate_failures": [],
+      "score": 84.84,
+      "score_components": {
+        "latency": 1.0,
+        "memory": 1.0,
+        "quality": 1.0,
+        "stability": 1.0,
+        "throughput": 0.4947
+      },
+      "status": "success",
+      "steps": [
+        {
+          "message": "",
+          "name": "environment_check",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "model_load",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "model_start",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "health_check",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "benchmark",
+          "status": "success"
+        },
+        {
+          "message": "rubric grading applied",
+          "name": "quality_grading",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "benchmark": {
+        "aggregate_throughput_tokens_s": 30.25,
+        "bandwidth_utilization": 0.748,
+        "concurrency": 1,
+        "cpu_usage_percent": null,
+        "decode_bandwidth_gbps": 204.16,
+        "peak_memory_gb": 82.64,
+        "quality": 0.911,
+        "quality_judge": 0.851,
+        "quality_keyword": 1.0,
+        "raw": {
+          "assumed_bandwidth_gbps": 273.0,
+          "engine_modelled": "trtllm",
+          "label": "SIMULATED_NOT_A_HARDWARE_BENCHMARK",
+          "model": "roofline: bandwidth / active bytes per token",
+          "quality_detail": "rubric grading applied",
+          "quality_samples": [
+            {
+              "answer": "The file handle is never closed. Use a with statement so it is released even if read() raises.",
+              "expected_terms": [
+                "close",
+                "with",
+                "context manager"
+              ],
+              "judge": {
+                "actionability": 0.9,
+                "completeness": 0.72,
+                "correctness": 1.0,
+                "note": "simulated rubric",
+                "score": 0.873,
+                "source": "simulated"
+              },
+              "keyword_hit": true,
+              "prompt_id": "python-resource-review"
+            },
+            {
+              "answer": "This concatenates user input into SQL, which is an injection vulnerability. Use a parameterized query instead.",
+              "expected_terms": [
+                "injection",
+                "parameter"
+              ],
+              "judge": {
+                "actionability": 0.9,
+                "completeness": 0.64,
+                "correctness": 1.0,
+                "note": "simulated rubric",
+                "score": 0.847,
+                "source": "simulated"
+              },
+              "keyword_hit": true,
+              "prompt_id": "sql-injection-review"
+            },
+            {
+              "answer": "Two threads incrementing without synchronization is a race condition. Guard the counter with a lock.",
+              "expected_terms": [
+                "race",
+                "lock",
+                "synchron"
+              ],
+              "judge": {
+                "actionability": 0.9,
+                "completeness": 0.6,
+                "correctness": 1.0,
+                "note": "simulated rubric",
+                "score": 0.833,
+                "source": "simulated"
+              },
+              "keyword_hit": true,
+              "prompt_id": "race-condition-review"
+            }
+          ]
+        },
+        "runs": 3,
+        "simulated": true,
+        "stability": 1.0,
+        "throughput_tokens_s": 30.17,
+        "total_latency_ms": 8552.11,
+        "tpot_ms": 33.15,
+        "ttft_ms": 62.65,
+        "ttft_p95_ms": 64.03,
+        "warmup_runs": 1
+      },
+      "candidate": {
+        "active_parameter_count_b": 12.0,
+        "candidate_id": "nemotron-3-super-120b-a12b-nvfp4-trtllm-nvfp4",
+        "concurrency": 1,
+        "confidence": 0.85,
+        "context_length": 8192,
+        "device": "CUDA",
+        "engine": "trtllm",
+        "expected_memory_gb": 79.46,
+        "fallback_of": null,
+        "knobs": {
+          "concurrency": 1,
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.9,
+          "kv_cache_dtype": "auto",
+          "max_num_seqs": 1,
+          "num_speculative_tokens": 3,
+          "speculative_decoding": false
+        },
+        "kv_cache_dtype": "auto",
+        "memory_estimate": {
+          "activation_overhead_gb": 4.49,
+          "budget_gb": 102.4,
+          "detail": "79.5 GB of a 102.4 GB budget",
+          "fits": true,
+          "kv_cache_gb": 0.17,
+          "total_gb": 79.46,
+          "weights_gb": 74.8
+        },
+        "model_id": "nemotron-3-super-120b-a12b-nvfp4",
+        "model_path": null,
+        "parameter_count_b": 120.0,
+        "precision": "NVFP4",
+        "quality_score": 0.93,
+        "reason": "TensorRT-LLM ranks #1 for latency; 12B of 120B parameters are read per token; 79.5 GB of a 102.4 GB budget",
+        "recovery_action": null,
+        "runtime": "mock",
+        "runtime_config": {
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.9,
+          "kv_cache_dtype": "auto",
+          "max_num_seqs": 1
+        },
+        "simulated": true,
+        "source_id": "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4"
+      },
+      "error": null,
+      "gate_failures": [],
+      "score": 58.58,
+      "score_components": {
+        "latency": 0.9595,
+        "memory": 0.0,
+        "quality": 1.0,
+        "stability": 1.0,
+        "throughput": 0.0
+      },
+      "status": "success",
+      "steps": [
+        {
+          "message": "",
+          "name": "environment_check",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "model_load",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "model_start",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "health_check",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "benchmark",
+          "status": "success"
+        },
+        {
+          "message": "rubric grading applied",
+          "name": "quality_grading",
+          "status": "success"
+        }
+      ]
+    },
+    {
+      "benchmark": {
+        "aggregate_throughput_tokens_s": 31.65,
+        "bandwidth_utilization": 0.696,
+        "concurrency": 1,
+        "cpu_usage_percent": null,
+        "decode_bandwidth_gbps": 189.87,
+        "peak_memory_gb": 68.62,
+        "quality": 0.911,
+        "quality_judge": 0.851,
+        "quality_keyword": 1.0,
+        "raw": {
+          "assumed_bandwidth_gbps": 273.0,
+          "engine_modelled": "vllm",
+          "label": "SIMULATED_NOT_A_HARDWARE_BENCHMARK",
+          "model": "roofline: bandwidth / active bytes per token",
+          "quality_detail": "rubric grading applied",
+          "quality_samples": [
+            {
+              "answer": "The file handle is never closed. Use a with statement so it is released even if read() raises.",
+              "expected_terms": [
+                "close",
+                "with",
+                "context manager"
+              ],
+              "judge": {
+                "actionability": 0.9,
+                "completeness": 0.72,
+                "correctness": 1.0,
+                "note": "simulated rubric",
+                "score": 0.873,
+                "source": "simulated"
+              },
+              "keyword_hit": true,
+              "prompt_id": "python-resource-review"
+            },
+            {
+              "answer": "This concatenates user input into SQL, which is an injection vulnerability. Use a parameterized query instead.",
+              "expected_terms": [
+                "injection",
+                "parameter"
+              ],
+              "judge": {
+                "actionability": 0.9,
+                "completeness": 0.64,
+                "correctness": 1.0,
+                "note": "simulated rubric",
+                "score": 0.847,
+                "source": "simulated"
+              },
+              "keyword_hit": true,
+              "prompt_id": "sql-injection-review"
+            },
+            {
+              "answer": "Two threads incrementing without synchronization is a race condition. Guard the counter with a lock.",
+              "expected_terms": [
+                "race",
+                "lock",
+                "synchron"
+              ],
+              "judge": {
+                "actionability": 0.9,
+                "completeness": 0.6,
+                "correctness": 1.0,
+                "note": "simulated rubric",
+                "score": 0.833,
+                "source": "simulated"
+              },
+              "keyword_hit": true,
+              "prompt_id": "race-condition-review"
+            }
+          ]
+        },
+        "runs": 3,
+        "simulated": true,
+        "stability": 1.0,
+        "throughput_tokens_s": 31.49,
+        "total_latency_ms": 8213.27,
+        "tpot_ms": 31.76,
+        "ttft_ms": 76.4,
+        "ttft_p95_ms": 78.76,
+        "warmup_runs": 1
+      },
+      "candidate": {
+        "active_parameter_count_b": 3.0,
+        "candidate_id": "nemotron-3.5-lightning-30b-a3b-bf16-vllm-bf16",
+        "concurrency": 1,
+        "confidence": 0.78,
+        "context_length": 8192,
+        "device": "CUDA",
+        "engine": "vllm",
+        "expected_memory_gb": 65.1,
+        "fallback_of": null,
+        "knobs": {
+          "concurrency": 1,
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.9,
+          "kv_cache_dtype": "auto",
+          "max_num_seqs": 1,
+          "num_speculative_tokens": 3,
+          "speculative_decoding": false
+        },
+        "kv_cache_dtype": "auto",
+        "memory_estimate": {
+          "activation_overhead_gb": 3.68,
+          "budget_gb": 102.4,
+          "detail": "65.1 GB of a 102.4 GB budget",
+          "fits": true,
+          "kv_cache_gb": 0.11,
+          "total_gb": 65.1,
+          "weights_gb": 61.31
+        },
+        "model_id": "nemotron-3.5-lightning-30b-a3b-bf16",
+        "model_path": null,
+        "parameter_count_b": 30.0,
+        "precision": "BF16",
+        "quality_score": 0.89,
+        "reason": "vLLM ranks #2 for latency; 3B of 30B parameters are read per token; 65.1 GB of a 102.4 GB budget",
+        "recovery_action": null,
+        "runtime": "mock",
+        "runtime_config": {
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.9,
+          "kv_cache_dtype": "auto",
+          "max_num_seqs": 1
+        },
+        "simulated": true,
+        "source_id": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16"
+      },
+      "error": null,
+      "gate_failures": [],
+      "score": 27.46,
+      "score_components": {
+        "latency": 0.0,
+        "memory": 0.2251,
+        "quality": 1.0,
+        "stability": 1.0,
+        "throughput": 0.0071
+      },
+      "status": "success",
+      "steps": [
+        {
+          "message": "",
+          "name": "environment_check",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "model_load",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "model_start",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "health_check",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "benchmark",
+          "status": "success"
+        },
+        {
+          "message": "rubric grading applied",
+          "name": "quality_grading",
+          "status": "success"
+        }
+      ]
+    }
+  ],
+  "finished_at": "2026-09-20T07:45:07.637703+00:00",
+  "hardware": {
+    "accelerator": {
+      "compute_capability": "12.1",
+      "detected": true,
+      "device_count": 1,
+      "driver_version": null,
+      "memory_total_gb": 128.0,
+      "names": [
+        "NVIDIA DGX Spark (GB10)"
+      ],
+      "source": "simulated",
+      "unified": true
+    },
+    "available_devices": [
+      "CUDA",
+      "CPU"
+    ],
+    "cpu": {
+      "architecture": "arm64",
+      "logical_cores": 10,
+      "model": "Apple M1 Max",
+      "workload": {
+        "usage_percent": 28.0
+      }
+    },
+    "devices": [
+      {
+        "available": true,
+        "id": "CUDA",
+        "kind": "gpu",
+        "name": "SIMULATED NVIDIA DGX Spark (GB10)",
+        "properties": {
+          "compute_capability": "12.1",
+          "memory_total_gb": 128.0,
+          "utilization_percent": null
+        }
+      },
+      {
+        "available": true,
+        "id": "CPU",
+        "kind": "cpu",
+        "name": "SIMULATED Grace CPU",
+        "properties": {}
+      }
+    ],
+    "disk": {
+      "free_gb": 335.5,
+      "total_gb": 926.35
+    },
+    "engines": {
+      "llamacpp": {
+        "available": true,
+        "binary_path": null,
+        "engine_id": "llamacpp",
+        "kind": "server",
+        "python_module": null,
+        "simulated": true
+      },
+      "nim": {
+        "available": true,
+        "binary_path": "/usr/local/bin/docker",
+        "detail": "docker is installed but no nvcr.io/nim/* image is present locally",
+        "engine_id": "nim",
+        "kind": "container",
+        "local_images": [],
+        "python_module": null,
+        "simulated": true
+      },
+      "sglang": {
+        "available": true,
+        "binary_path": null,
+        "engine_id": "sglang",
+        "kind": "server",
+        "python_module": false,
+        "simulated": true
+      },
+      "transformers": {
+        "available": true,
+        "binary_path": null,
+        "engine_id": "transformers",
+        "kind": "library",
+        "python_module": false,
+        "simulated": true
+      },
+      "trtllm": {
+        "available": true,
+        "binary_path": null,
+        "engine_id": "trtllm",
+        "kind": "server",
+        "python_module": false,
+        "simulated": true
+      },
+      "vllm": {
+        "available": true,
+        "binary_path": null,
+        "engine_id": "vllm",
+        "kind": "server",
+        "python_module": false,
+        "simulated": true
+      }
+    },
+    "fingerprint": "7fac0589d0093e6ffa8aececb95168cbb552d8fee0fd23f804a5143469b1fe05",
+    "memory": {
+      "available_gb": 120.0,
+      "simulated": true,
+      "total_gb": 128.0,
+      "used_percent": 56.5
+    },
+    "memory_bandwidth_gbps": 273,
+    "notes": [
+      "Development simulation only; every number is modelled, not measured.",
+      "Simulating platform 'dgx_spark' with 128.0 GB unified memory at 273 GB/s."
+    ],
+    "os": {
+      "machine": "arm64",
+      "name": "Darwin",
+      "release": "25.6.0",
+      "version": "Darwin Kernel Version 25.6.0: Fri Jul 31 19:18:49 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T6000"
+    },
+    "platform_id": "dgx_spark",
+    "real_execution_ready": false,
+    "simulated": true,
+    "stack": {
+      "cuda": {
+        "nvcc_version": null,
+        "simulated": true
+      },
+      "engines_available": [
+        "llamacpp",
+        "nim",
+        "sglang",
+        "transformers",
+        "trtllm",
+        "vllm"
+      ],
+      "platform": "dgx_spark"
+    },
+    "unified_memory": true
+  },
+  "intent": {
+    "capabilities": [
+      "code_review"
+    ],
+    "concurrency": 1,
+    "context_length": 8192,
+    "modalities": [
+      "text"
+    ],
+    "preferred_language": [
+      "zh",
+      "en"
+    ],
+    "priority": "latency",
+    "privacy": "local_only",
+    "quality": "high",
+    "raw_text": "帮我部署一个完全本地运行的代码审查 AI，代码不能离开这台电脑，响应速度优先",
+    "task": "coding"
+  },
+  "profile_reused": false,
+  "run_id": "fefd7afb-305e-40b3-a4fc-c227cc28d95a",
+  "started_at": "2026-09-20T07:45:07.446863+00:00",
+  "status": "READY",
+  "warnings": [
+    "SIMULATED: no benchmark ran on real hardware. These numbers are modelled and must not be reported as measurements."
+  ]
+}

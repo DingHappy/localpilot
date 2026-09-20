@@ -82,6 +82,7 @@ The judge must not be the candidate's own server.
     localpilot status [--json]
     localpilot profiles [--json]
     localpilot benchmark [--task coding]
+    localpilot report [<run_id>] [--json]
     localpilot demo [--mode mock] [--json]
     localpilot stop
     localpilot serve [--host 127.0.0.1] [--port 8000]
@@ -105,7 +106,24 @@ The judge must not be the candidate's own server.
 A real search takes minutes, so `POST /v1/autopilot` is asynchronous. Pass
 `{"wait": true, "timeout": 120}` for a synchronous reply in mock mode.
 
+`report` exports a run (the latest by default) to `results/` as Markdown
+plus its raw JSON. `profiles/` is machine state and is not version
+controlled; `results/` is curated evidence that is. The filename carries
+`-real-` or `-sim-`.
+
 `stop` preserves profile files and downloaded weights.
+
+## How the numbers are taken
+
+- Concurrent streams are given different prompts. Identical requests would
+  measure the prefix cache rather than the engine.
+- `max_new_tokens` defaults to 256 so the decode rate is not dominated by
+  time-to-first-token.
+- Peak memory is sampled during generation via NVML and the maximum kept.
+  `benchmark.raw.peak_memory_source` says whether it was observed or fell
+  back to the planner's estimate.
+- The first token is excluded from the decode rate; it is TTFT.
+- Warmup runs are discarded.
 
 ## Interpreting output
 

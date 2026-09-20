@@ -346,6 +346,16 @@ function poll(jobId) {
     } catch (error) {
       clearInterval(pollTimer); showError(error.message); resetButton(); return;
     }
+
+    // A real search starts and measures servers for minutes. Render the
+    // trace as it arrives so the page shows the work instead of a spinner,
+    // and so a failure still shows how far the run got.
+    if (job.trace && job.trace.length) {
+      renderTrace(job.trace);
+      const last = job.trace[job.trace.length - 1];
+      $("runBtn").textContent = `${last.agent}: ${last.action}`;
+    }
+
     if (job.status === "succeeded") {
       clearInterval(pollTimer);
       render(job.result);
@@ -474,13 +484,17 @@ function renderRejections(result) {
 }
 
 function renderTrace(trace) {
-  $("trace").innerHTML = trace.map((step) =>
+  const panel = $("trace");
+  const pinned = panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 24;
+  panel.innerHTML = trace.map((step) =>
     `<div class="row ${esc(step.status)}">
        <span class="ag">${esc(step.agent)}</span>
        <span class="ac">${esc(step.action)}</span>
        <span>${esc(step.detail)}</span>
      </div>`).join("");
   $("tracePanel").classList.remove("hidden");
+  // Follow the tail while it streams, unless the reader scrolled up to read.
+  if (pinned) panel.scrollTop = panel.scrollHeight;
 }
 
 async function loadProfiles() {

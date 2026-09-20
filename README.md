@@ -153,6 +153,7 @@ localpilot optimize      the same, for re-tuning
 localpilot benchmark     re-measure the active profile
 localpilot status        the active configuration
 localpilot profiles      what has been remembered
+localpilot report        export a run to results/ as Markdown and JSON
 localpilot demo          the A/B story
 localpilot serve         dashboard and OpenAI-compatible API
 localpilot stop          release LocalPilot state, keep weights and profiles
@@ -203,6 +204,43 @@ config/
 The runtime boundary is an abstract six-method provider, so a new engine is a
 subclass and a config entry rather than a change to the orchestration.
 
+## Evidence
+
+`profiles/` and `logs/` are machine state and stay out of version control.
+`results/` is the opposite: `localpilot report` exports a run there as
+Markdown plus its raw JSON, and those are committed, because a measurement
+nobody can review is not evidence.
+
+```bash
+localpilot autopilot "..." --mode vllm --no-reuse
+localpilot report                 # writes results/<stamp>-real-<task>-<priority>.md
+```
+
+The filename carries `-real-` or `-sim-`, the report states the label above
+the numbers, and every comparison in it names the axes on which the pair
+differed.
+
+## How the measurement is taken
+
+Details that decide whether the numbers mean anything:
+
+- **Concurrent streams get different prompts.** Firing the identical
+  request N times at a server with prefix caching on measures the cache:
+  every stream after the first skips prefill, and aggregate throughput
+  lands far above what real users would see.
+- **`max_new_tokens` is 256, not 64.** At 64 tokens a ~60 ms TTFT is over a
+  tenth of the measurement and the decode rate is estimated from 63
+  samples.
+- **Peak memory is sampled during generation**, every 250 ms via NVML, and
+  the maximum is kept. Reading it once at the end reports whatever happens
+  to be resident after the work finished. When NVML is unavailable the
+  planner's estimate is used and `raw.peak_memory_source` says so.
+- **The first token is excluded from the decode rate.** It is
+  time-to-first-token; counting it would blend prefill into a generation
+  figure.
+- **Warmup runs are discarded**, because the first request pays for graph
+  capture and cache warmup.
+
 ## What is honest about the numbers
 
 - `hardware.simulated` and `benchmark.simulated` must both be false before a
@@ -231,7 +269,7 @@ subclass and a config entry rather than a change to the orchestration.
 ## Tests
 
 ```bash
-python3 -m unittest discover -s tests     # 108 tests, standard library only
+python3 -m unittest discover -s tests     # 142 tests, standard library only
 ```
 
 Real-hardware integration tests will be added and marked separately once the

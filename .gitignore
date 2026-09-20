@@ -8,8 +8,17 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+# profiles/ and logs/ are machine state: they are regenerated per machine
+# and would only add noise here.
 profiles/*.json
 profiles/runs/
 logs/*.jsonl
 models/
+
+# results/ is the opposite: curated exports from `localpilot report`, kept
+# in version control because a measurement nobody can review is not
+# evidence.
+!results/
+!results/*.md
+!results/*.json
 

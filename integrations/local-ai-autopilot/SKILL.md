@@ -64,7 +64,10 @@ Understand → Inspect → Plan → Execute → Measure → Grade → Rank → R
    differ. A speed ratio between configurations that differ in precision,
    engine and speculative decoding at once does not establish a claim
    about any one of them.
-9. For command details and output contracts, read `references/cli.md`.
+9. Run `localpilot report` to export the run to `results/` when the user
+   wants the result kept, reviewed or written up. Simulated and measured
+   exports are named differently on purpose.
+10. For command details and output contracts, read `references/cli.md`.
 
 ## Composing with NVIDIA's own skills
 
@@ -103,7 +106,13 @@ fingerprint so the next run is a lookup.
 - Recovery candidates carry `fallback_of` and `recovery_action`. Do not
   retry past the configured recovery limit.
 - `memory_estimate` is a pre-flight estimate. `benchmark.peak_memory_gb`
-  is what was observed. Quote the second.
+  is what was observed. Quote the second, and check
+  `benchmark.raw.peak_memory_source`: it says whether the figure is an
+  observed NVML peak or a fallback to the estimate.
+- `benchmark.concurrency` above 1 means the figure is a batch measurement.
+  Per-stream throughput and aggregate throughput move in opposite
+  directions there, so quote whichever the user's priority is about and say
+  which one it is.
 
 ## Safety boundaries
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 from localpilot.schemas import AgentStep
 
@@ -19,6 +19,7 @@ class Agent:
 
     def __init__(self) -> None:
         self.trace: List[AgentStep] = []
+        self.sink: Optional[Callable[[AgentStep], None]] = None
 
     def record(
         self,
@@ -35,6 +36,14 @@ class Agent:
             data=data or {},
         )
         self.trace.append(step)
+        # A real search starts and measures servers for minutes. Emitting
+        # each step as it happens is what lets a caller watch the run
+        # instead of waiting on a result that only exists at the end.
+        if self.sink is not None:
+            try:
+                self.sink(step)
+            except Exception:
+                pass
         return step
 
     def drain(self) -> List[AgentStep]:

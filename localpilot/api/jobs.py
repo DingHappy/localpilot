@@ -27,6 +27,18 @@ class AutopilotJob:
         self.finished_at: Optional[str] = None
         self.result: Optional[Dict[str, Any]] = None
         self.error: Optional[str] = None
+        # Filled step by step while the run is in flight, so a poller has
+        # something to show long before the result exists.
+        self.trace: List[Dict[str, Any]] = []
+        self._trace_lock = threading.Lock()
+
+    def append_step(self, step) -> None:
+        with self._trace_lock:
+            self.trace.append(step.to_dict())
+
+    def snapshot_trace(self) -> List[Dict[str, Any]]:
+        with self._trace_lock:
+            return list(self.trace)
 
     def to_dict(self, include_result: bool = True) -> Dict[str, Any]:
         payload = {
@@ -39,6 +51,7 @@ class AutopilotJob:
             "error": self.error,
         }
         if include_result:
+            payload["trace"] = self.snapshot_trace()
             payload["result"] = self.result
         return payload
 
@@ -70,7 +83,10 @@ class JobRegistry:
         try:
             orchestrator = self.orchestrator_factory()
             result = orchestrator.autopilot(
-                job.goal, mode=job.mode, reuse_profile=job.reuse_profile
+                job.goal,
+                mode=job.mode,
+                reuse_profile=job.reuse_profile,
+                progress=job.append_step,
             )
             job.result = result.to_dict()
             job.status = "succeeded"

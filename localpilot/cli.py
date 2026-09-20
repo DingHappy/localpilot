@@ -17,6 +17,7 @@ from localpilot.orchestrator import Orchestrator
 from localpilot.planner.planner import Planner
 from localpilot.planner.policies import PolicyEngine
 from localpilot.profiles.store import ProfileStore
+from localpilot.reporting import export_run, latest_run_id, results_root
 from localpilot.schemas import CandidatePlan, MemoryEstimate
 from localpilot.sizing import MemoryModel, decode_roofline_tokens_s
 
@@ -379,6 +380,46 @@ def command_profiles(args) -> int:
     return 0
 
 
+def command_report(args) -> int:
+    """Exports a run to results/ for review and for the write-up.
+
+    profiles/ is machine state and is not version controlled. results/ is
+    curated evidence that is, because a measurement nobody can review is
+    not evidence.
+    """
+    store = ProfileStore()
+    run_id = args.run_id or latest_run_id(store)
+    if not run_id:
+        print("No runs recorded yet. Run localpilot autopilot first.")
+        return 2
+    run = store.load_run(run_id)
+    if run is None:
+        print(f"Unknown run: {run_id}")
+        return 2
+
+    markdown_path, json_path = export_run(run)
+    if args.json:
+        _print_json(
+            {
+                "run_id": run_id,
+                "markdown": str(markdown_path),
+                "json": str(json_path),
+                "simulated": (run.get("hardware") or {}).get("simulated"),
+            }
+        )
+        return 0
+
+    simulated = (run.get("hardware") or {}).get("simulated")
+    print(f"Exported run {run_id[:8]} ({'SIMULATED' if simulated else 'MEASURED'})")
+    print(f"  {markdown_path.relative_to(results_root().parent)}")
+    print(f"  {json_path.relative_to(results_root().parent)}")
+    if simulated:
+        print()
+        print("This run is simulated. Commit it as orchestration evidence, not")
+        print("as a hardware measurement.")
+    return 0
+
+
 def command_stop(args) -> int:
     ProfileStore().stop()
     print("LocalPilot state is STOPPED. Saved profiles were retained.")
@@ -491,6 +532,15 @@ def build_parser() -> argparse.ArgumentParser:
     profiles = subparsers.add_parser("profiles", help="list remembered profiles")
     profiles.add_argument("--json", action="store_true")
     profiles.set_defaults(func=command_profiles)
+
+    report = subparsers.add_parser(
+        "report", help="export a run to results/ as Markdown and JSON"
+    )
+    report.add_argument(
+        "run_id", nargs="?", default=None, help="defaults to the latest run"
+    )
+    report.add_argument("--json", action="store_true")
+    report.set_defaults(func=command_report)
 
     stop = subparsers.add_parser("stop")
     stop.set_defaults(func=command_stop)
