@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "localpilot"
+version = "0.1.0"
+description = "AI compute autopilot for local model planning, validation, benchmarking, and optimization"
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "Apache-2.0" }
+authors = [
+  { name = "LocalPilot contributors" }
+]
+keywords = ["local-ai", "openvino", "intel", "benchmark", "autopilot"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "License :: OSI Approved :: Apache Software License",
+]
+
+[project.optional-dependencies]
+intel = [
+  "openvino>=2025.2,<2027",
+  "openvino-genai>=2025.2,<2027",
+  "huggingface-hub>=0.29,<2",
+  "psutil>=5.9,<8",
+]
+api = [
+  "fastapi>=0.115,<1",
+  "uvicorn>=0.30,<1",
+]
+dev = [
+  "pytest>=8,<10",
+]
+all = [
+  "openvino>=2025.2,<2027",
+  "openvino-genai>=2025.2,<2027",
+  "huggingface-hub>=0.29,<2",
+  "psutil>=5.9,<8",
+  "fastapi>=0.115,<1",
+  "uvicorn>=0.30,<1",
+  "pytest>=8,<10",
+]
+
+[project.scripts]
+localpilot = "localpilot.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["localpilot*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

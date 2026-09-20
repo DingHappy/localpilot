@@ -1,0 +1,4 @@
+interface:
+  display_name: "Local AI Autopilot"
+  short_description: "Plan, benchmark, and optimize local AI execution"
+  default_prompt: "Use $local-ai-autopilot to recommend and validate the best local AI configuration for this machine."

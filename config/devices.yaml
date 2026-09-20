@@ -1,0 +1,10 @@
+{
+  "devices": {
+    "CPU": {"kind": "cpu", "fallback_rank": 3},
+    "GPU": {"kind": "gpu", "fallback_rank": 1},
+    "NPU": {"kind": "npu", "fallback_rank": 2},
+    "AUTO": {"kind": "router", "benchmark_allowed": false}
+  },
+  "mock_available_devices": ["CPU", "GPU", "NPU"]
+}
+

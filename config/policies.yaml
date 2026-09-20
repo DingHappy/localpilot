@@ -1,0 +1,56 @@
+{
+  "priorities": {
+    "latency": {
+      "prefer_device": ["GPU", "NPU", "CPU"],
+      "weights": {
+        "quality": 0.10,
+        "latency": 0.35,
+        "throughput": 0.30,
+        "memory": 0.10,
+        "stability": 0.15
+      }
+    },
+    "quality": {
+      "prefer_device": ["GPU", "CPU", "NPU"],
+      "prefer_larger_model": true,
+      "weights": {
+        "quality": 0.45,
+        "latency": 0.15,
+        "throughput": 0.15,
+        "memory": 0.10,
+        "stability": 0.15
+      }
+    },
+    "balanced": {
+      "prefer_device": ["GPU", "NPU", "CPU"],
+      "weights": {
+        "quality": 0.25,
+        "latency": 0.20,
+        "throughput": 0.20,
+        "memory": 0.15,
+        "stability": 0.20
+      }
+    },
+    "low_memory": {
+      "prefer_device": ["NPU", "GPU", "CPU"],
+      "weights": {
+        "quality": 0.15,
+        "latency": 0.15,
+        "throughput": 0.15,
+        "memory": 0.40,
+        "stability": 0.15
+      }
+    }
+  },
+  "memory": {
+    "safety_reserve_percent": 20
+  },
+  "quality_gate": 0.55,
+  "stability_gate": 0.90,
+  "max_candidates": 3,
+  "recovery": {
+    "max_attempts": 2,
+    "minimum_context_length": 2048,
+    "fallback_device": "CPU"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "warmup_runs": 1,
+  "measured_runs": 3,
+  "max_new_tokens": 64,
+  "prompts": [
+    {
+      "id": "python-resource-review",
+      "task": "coding",
+      "text": "Review this Python pattern: f = open(path); data = f.read(). Identify the main reliability issue.",
+      "expected_terms": ["close", "with", "context manager"]
+    },
+    {
+      "id": "sql-injection-review",
+      "task": "coding",
+      "text": "Review: cursor.execute('SELECT * FROM users WHERE name=' + name). Identify the security issue.",
+      "expected_terms": ["injection", "parameter"]
+    },
+    {
+      "id": "race-condition-review",
+      "task": "coding",
+      "text": "Two threads increment the same shared counter without synchronization. Identify the issue.",
+      "expected_terms": ["race", "lock", "synchron"]
+    },
+    {
+      "id": "local-chat-smoke",
+      "task": "chat",
+      "text": "Explain in one sentence where this local model response is generated.",
+      "expected_terms": ["local", "device", "computer"]
+    }
+  ]
+}

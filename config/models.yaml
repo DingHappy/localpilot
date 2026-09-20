@@ -1,0 +1,67 @@
+{
+  "models": [
+    {
+      "model_id": "qwen2.5-coder-1.5b-instruct-int4-ov",
+      "source_id": "OpenVINO/Qwen2.5-Coder-1.5B-Instruct-int4-ov",
+      "task": "coding",
+      "parameter_count_b": 1.5,
+      "disk_size_gb": 1.2,
+      "precision": "INT4_ASYM",
+      "supported_devices": ["CPU", "GPU"],
+      "minimum_ram_gb": 6,
+      "recommended_ram_gb": 8,
+      "context_length": 32768,
+      "quality_score": 0.72,
+      "openvino_compatible": true,
+      "validation": "unverified_on_target",
+      "variants": {
+        "CPU": {"precision": "INT4_ASYM", "tested": false},
+        "GPU": {"precision": "INT4_ASYM", "tested": false},
+        "NPU": {
+          "precision": "INT4_SYM_G128",
+          "tested": false,
+          "reason": "requires a separately exported and target-validated artifact"
+        }
+      }
+    },
+    {
+      "model_id": "qwen2.5-coder-7b-instruct-int4-ov",
+      "source_id": "OpenVINO/Qwen2.5-Coder-7B-Instruct-int4-ov",
+      "task": "coding",
+      "parameter_count_b": 7.0,
+      "disk_size_gb": 4.8,
+      "precision": "INT4_ASYM",
+      "supported_devices": ["CPU", "GPU"],
+      "minimum_ram_gb": 12,
+      "recommended_ram_gb": 16,
+      "context_length": 32768,
+      "quality_score": 0.86,
+      "openvino_compatible": true,
+      "validation": "unverified_on_target",
+      "variants": {
+        "CPU": {"precision": "INT4_ASYM", "tested": false},
+        "GPU": {"precision": "INT4_ASYM", "tested": false}
+      }
+    },
+    {
+      "model_id": "qwen2.5-1.5b-instruct-int4-ov",
+      "source_id": "OpenVINO/Qwen2.5-1.5B-Instruct-int4-ov",
+      "task": "chat",
+      "parameter_count_b": 1.5,
+      "disk_size_gb": 1.2,
+      "precision": "INT4_ASYM",
+      "supported_devices": ["CPU", "GPU"],
+      "minimum_ram_gb": 6,
+      "recommended_ram_gb": 8,
+      "context_length": 32768,
+      "quality_score": 0.70,
+      "openvino_compatible": true,
+      "validation": "unverified_on_target",
+      "variants": {
+        "CPU": {"precision": "INT4_ASYM", "tested": false},
+        "GPU": {"precision": "INT4_ASYM", "tested": false}
+      }
+    }
+  ]
+}
+
