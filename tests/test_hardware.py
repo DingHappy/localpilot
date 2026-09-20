@@ -56,6 +56,98 @@ class DetectedProfileTests(unittest.TestCase):
             self.assertIn("available", report)
 
 
+class PlatformDetectionTests(unittest.TestCase):
+    """Which platform this is decides the memory budget.
+
+    A misidentification silently swaps the ceiling between board VRAM and
+    system memory, which rewrites every gating decision. So the profile has
+    to carry what the decision was based on.
+    """
+
+    def test_the_profile_records_what_identification_was_based_on(self):
+        profile = HardwareProfiler().profile(simulate=False)
+        detection = profile.stack.get("platform_detection")
+        self.assertIsNotNone(detection)
+        self.assertIn("matched_on", detection)
+        self.assertIn("gpu_names", detection)
+        self.assertIn("architecture", detection)
+        self.assertTrue(detection["matched_on"])
+
+    def test_a_gpu_name_match_is_reported_as_the_reason(self):
+        profiler = HardwareProfiler()
+        config = {
+            "platforms": {
+                "dgx_spark": {
+                    "detect": {"gpu_name_contains": ["GB10"]},
+                    "unified_memory": True,
+                },
+                "cuda_discrete": {"detect": {}, "unified_memory": False},
+            }
+        }
+        platform_id, spec, signals = profiler._identify_platform(
+            {"detected": True, "names": ["NVIDIA GB10"]}, "aarch64", config
+        )
+        self.assertEqual(platform_id, "dgx_spark")
+        self.assertTrue(spec["unified_memory"])
+        self.assertIn("GB10", signals["matched_on"])
+
+    def test_an_unrecognised_cuda_device_falls_back_and_says_so(self):
+        profiler = HardwareProfiler()
+        config = {
+            "platforms": {
+                "dgx_spark": {
+                    "detect": {"gpu_name_contains": ["GB10"]},
+                    "unified_memory": True,
+                },
+                "cuda_discrete": {"detect": {}, "unified_memory": False},
+            }
+        }
+        platform_id, spec, signals = profiler._identify_platform(
+            {"detected": True, "names": ["Some Virtualised GPU"]},
+            "aarch64",
+            config,
+        )
+        self.assertEqual(platform_id, "cuda_discrete")
+        self.assertFalse(spec["unified_memory"])
+        self.assertIn("fallback", signals["matched_on"])
+
+    def test_an_arm_cpu_alone_does_not_identify_the_platform(self):
+        """Jetson is also aarch64 with CUDA, and its memory differs.
+
+        config/devices.yaml once declared an `architecture` condition that
+        the code never read. Removing it is only safe if architecture can
+        never be sufficient on its own.
+        """
+        profiler = HardwareProfiler()
+        config = {
+            "platforms": {
+                "dgx_spark": {
+                    "detect": {"gpu_name_contains": ["GB10"]},
+                    "unified_memory": True,
+                },
+                "cuda_discrete": {"detect": {}, "unified_memory": False},
+            }
+        }
+        platform_id, _, _ = profiler._identify_platform(
+            {"detected": True, "names": ["Jetson AGX Orin"]}, "aarch64", config
+        )
+        self.assertNotEqual(platform_id, "dgx_spark")
+
+    def test_declared_detection_keys_are_all_read_by_the_code(self):
+        """Guards against a config key the code ignores."""
+        from localpilot.utils import load_data_file, project_home
+
+        config = load_data_file(project_home() / "config" / "devices.yaml")
+        understood = {"gpu_name_contains", "device_tree_model_contains"}
+        for platform_id, spec in (config.get("platforms") or {}).items():
+            declared = set((spec.get("detect") or {}).keys())
+            self.assertTrue(
+                declared <= understood,
+                f"{platform_id} declares {declared - understood}, which "
+                "_identify_platform does not read",
+            )
+
+
 class ProviderTests(unittest.TestCase):
     def test_capabilities_report_the_platform_shape(self):
         provider = NvidiaProvider()

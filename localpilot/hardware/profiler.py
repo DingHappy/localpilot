@@ -293,29 +293,48 @@ class HardwareProfiler:
         accelerator: Dict[str, Any],
         native_machine: str,
         config: Dict[str, Any],
-    ) -> Tuple[str, Dict[str, Any]]:
+    ) -> Tuple[str, Dict[str, Any], Dict[str, Any]]:
+        """Identifies the platform, and reports what it decided on.
+
+        Which platform this is changes the memory budget from board VRAM to
+        system memory, so a silent misidentification quietly rewrites every
+        gating decision. The evidence travels with the answer so `doctor`
+        can show why it landed where it did.
+
+        Only the GPU name and the device tree count as evidence. An aarch64
+        CPU does not: Jetson is also aarch64 with CUDA, and its memory
+        behaves differently.
+        """
         platforms = config.get("platforms", {})
-        gpu_names = " ".join(accelerator.get("names") or []).upper()
-        tree_model = (_device_tree_model() or "").upper()
+        observed_names = accelerator.get("names") or []
+        gpu_names = " ".join(observed_names).upper()
+        tree_model = _device_tree_model() or ""
+
+        signals = {
+            "gpu_names": observed_names,
+            "device_tree_model": tree_model or None,
+            "architecture": native_machine,
+            "matched_on": None,
+        }
 
         for platform_id, spec in platforms.items():
             detect = spec.get("detect") or {}
             if not detect:
                 continue
-            name_hit = any(
-                token.upper() in gpu_names
-                for token in detect.get("gpu_name_contains", [])
-            )
-            tree_hit = any(
-                token.upper() in tree_model
-                for token in detect.get("device_tree_model_contains", [])
-            )
-            if name_hit or tree_hit:
-                return platform_id, spec
+            for token in detect.get("gpu_name_contains", []):
+                if token.upper() in gpu_names:
+                    signals["matched_on"] = f"gpu_name contains '{token}'"
+                    return platform_id, spec, signals
+            for token in detect.get("device_tree_model_contains", []):
+                if token.upper() in tree_model.upper():
+                    signals["matched_on"] = f"device_tree contains '{token}'"
+                    return platform_id, spec, signals
 
         if accelerator.get("detected"):
-            return "cuda_discrete", platforms.get("cuda_discrete", {})
-        return "unknown", {}
+            signals["matched_on"] = "fallback: a CUDA device with no platform match"
+            return "cuda_discrete", platforms.get("cuda_discrete", {}), signals
+        signals["matched_on"] = "no CUDA device detected"
+        return "unknown", {}, signals
 
     def profile(self, simulate: bool = False) -> HardwareProfile:
         config = self._device_config()
@@ -390,7 +409,7 @@ class HardwareProfiler:
             }
         else:
             accelerator, devices = _detect_cuda()
-            platform_id, platform_spec = self._identify_platform(
+            platform_id, platform_spec, detection = self._identify_platform(
                 accelerator, native_machine, config
             )
             unified_memory = bool(platform_spec.get("unified_memory", False))
@@ -413,6 +432,7 @@ class HardwareProfiler:
             stack = {
                 "cuda": _cuda_toolkit(),
                 "platform": platform_id,
+                "platform_detection": detection,
                 "engines_available": sorted(
                     engine_id
                     for engine_id, report in engine_reports.items()
@@ -444,9 +464,14 @@ class HardwareProfiler:
                     "speculative decoding are ranked accordingly."
                 )
             elif platform_id == "cuda_discrete":
+                observed = ", ".join(accelerator.get("names") or []) or "unknown"
                 notes.append(
                     "Discrete CUDA GPU: the memory ceiling is board VRAM, not "
-                    "host RAM."
+                    "host RAM. If this machine really has unified memory the "
+                    "budget is now wrong -- the GPU reported itself as "
+                    f"'{observed}', so add a matching token to "
+                    "config/devices.yaml under the right platform's "
+                    "gpu_name_contains."
                 )
 
         if unified_memory and memory.get("total_gb"):

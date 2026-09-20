@@ -136,7 +136,15 @@ def command_doctor(args) -> int:
           f"({profile.os['machine']})")
     print(f"CPU             {profile.cpu['model']} "
           f"({profile.cpu['logical_cores']} cores)")
+    detection = profile.stack.get("platform_detection") or {}
     print(f"Platform        {profile.platform_id}")
+    if detection:
+        print(f"  identified by {detection.get('matched_on')}")
+        print(f"  gpu reported  "
+              f"{', '.join(detection.get('gpu_names') or []) or 'none'}")
+        print(f"  device tree   "
+              f"{detection.get('device_tree_model') or 'not present'}")
+        print(f"  architecture  {detection.get('architecture')}")
     memory_kind = "unified" if profile.unified_memory else "host"
     print(f"Memory          {profile.memory.get('total_gb')} GB {memory_kind}")
     if profile.memory_bandwidth_gbps:

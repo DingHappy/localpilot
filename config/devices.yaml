@@ -1,23 +1,34 @@
 {
   "devices": {
-    "CUDA": {"kind": "gpu", "fallback_rank": 1},
-    "CPU": {"kind": "cpu", "fallback_rank": 2}
+    "CUDA": {
+      "kind": "gpu",
+      "fallback_rank": 1
+    },
+    "CPU": {
+      "kind": "cpu",
+      "fallback_rank": 2
+    }
   },
-
-  "mock_available_devices": ["CUDA", "CPU"],
-
+  "mock_available_devices": [
+    "CUDA",
+    "CPU"
+  ],
   "platforms": {
     "dgx_spark": {
       "display_name": "NVIDIA DGX Spark (GB10)",
       "detect": {
-        "gpu_name_contains": ["GB10"],
-        "device_tree_model_contains": ["DGX Spark", "NVIDIA DGX Spark"],
-        "architecture": ["aarch64", "arm64"]
+        "gpu_name_contains": [
+          "GB10"
+        ],
+        "device_tree_model_contains": [
+          "DGX Spark",
+          "NVIDIA DGX Spark"
+        ]
       },
       "unified_memory": true,
       "memory_bandwidth_gbps": 273,
       "compute_capability": "12.1",
-      "notes": "One coherent 128 GB LPDDR5x pool shared by a 20-core Grace CPU and a Blackwell GPU. Capacity is unusually large for the form factor while bandwidth stays far below HBM, so decode is bandwidth-bound long before it is compute-bound. Published figures; confirm against the target before quoting them."
+      "notes": "One coherent 128 GB LPDDR5x pool shared by a 20-core Grace CPU and a Blackwell GPU. Capacity is unusually large for the form factor while bandwidth stays far below HBM, so decode is bandwidth-bound long before it is compute-bound. Published figures; confirm against the target before quoting them. Detection matches on the GPU name or the device tree only: an aarch64 CPU is not evidence on its own, since Jetson is also aarch64 with CUDA and has different memory characteristics. On a virtualized node where neither signal appears, add the observed GPU name to gpu_name_contains -- `localpilot doctor` prints what it saw."
     },
     "cuda_discrete": {
       "display_name": "Discrete NVIDIA GPU",
@@ -27,6 +38,5 @@
       "notes": "Fallback description for any other CUDA device. Capacity is the board's own VRAM, not host RAM."
     }
   },
-
   "mock_platform": "dgx_spark"
 }
