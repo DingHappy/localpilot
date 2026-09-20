@@ -2,30 +2,117 @@
   "warmup_runs": 1,
   "measured_runs": 3,
   "max_new_tokens": 64,
+  "_note": "expected_terms drives the keyword signal only. It is a weak signal on purpose -- 'this has no race condition' contains the word 'race' -- which is why the judge agent grades the same answers against a rubric and the two are blended.",
   "prompts": [
     {
       "id": "python-resource-review",
       "task": "coding",
       "text": "Review this Python pattern: f = open(path); data = f.read(). Identify the main reliability issue.",
-      "expected_terms": ["close", "with", "context manager"]
+      "expected_terms": [
+        "close",
+        "with",
+        "context manager"
+      ],
+      "mock_answer": "The file handle is never closed. Use a with statement so it is released even if read() raises."
     },
     {
       "id": "sql-injection-review",
       "task": "coding",
       "text": "Review: cursor.execute('SELECT * FROM users WHERE name=' + name). Identify the security issue.",
-      "expected_terms": ["injection", "parameter"]
+      "expected_terms": [
+        "injection",
+        "parameter"
+      ],
+      "mock_answer": "This concatenates user input into SQL, which is an injection vulnerability. Use a parameterized query instead."
     },
     {
       "id": "race-condition-review",
       "task": "coding",
       "text": "Two threads increment the same shared counter without synchronization. Identify the issue.",
-      "expected_terms": ["race", "lock", "synchron"]
+      "expected_terms": [
+        "race",
+        "lock",
+        "synchron"
+      ],
+      "mock_answer": "Two threads incrementing without synchronization is a race condition. Guard the counter with a lock."
     },
     {
       "id": "local-chat-smoke",
       "task": "chat",
       "text": "Explain in one sentence where this local model response is generated.",
-      "expected_terms": ["local", "device", "computer"]
+      "expected_terms": [
+        "local",
+        "device",
+        "computer",
+        "machine"
+      ],
+      "mock_answer": "The response is generated entirely on the local machine, on this device's own accelerator."
+    },
+    {
+      "id": "chat-reasoning",
+      "task": "chat",
+      "text": "A server has 128 GB of memory and a 20 GB model is loaded. Roughly how much is left for the KV cache if 6 GB is reserved for overhead? Answer with the number.",
+      "expected_terms": [
+        "102",
+        "100",
+        "gb"
+      ],
+      "mock_answer": "About 102 GB of memory is left for the KV cache."
+    },
+    {
+      "id": "agentic-tool-plan",
+      "task": "agentic",
+      "text": "You can call list_files(dir) and read_file(path). Describe the two calls, in order, needed to read the first Python file in ./src.",
+      "expected_terms": [
+        "list_files",
+        "read_file"
+      ],
+      "mock_answer": "First call list_files('./src') to enumerate the directory, then call read_file on the first .py path it returns."
+    },
+    {
+      "id": "agentic-refusal",
+      "task": "agentic",
+      "text": "You have only list_files and read_file. The user asks you to delete a file. State what you do.",
+      "expected_terms": [
+        "cannot",
+        "no",
+        "not available",
+        "unable"
+      ],
+      "mock_answer": "I cannot delete files: only list_files and read_file are available to me, so that action is not possible."
+    },
+    {
+      "id": "vision-describe",
+      "task": "vision",
+      "text": "Describe what an image of a server rack would contain, in one sentence.",
+      "expected_terms": [
+        "server",
+        "rack",
+        "cable",
+        "hardware"
+      ],
+      "mock_answer": "The image would show a server rack of stacked hardware with network cables running between the units."
+    },
+    {
+      "id": "embedding-smoke",
+      "task": "embedding",
+      "text": "Local inference on a unified memory machine.",
+      "expected_terms": [
+        "local",
+        "memory",
+        "inference"
+      ],
+      "mock_answer": "This text describes local inference running in unified memory on the machine itself."
+    },
+    {
+      "id": "audio-smoke",
+      "task": "audio",
+      "text": "Transcribe and reply: what is the capital of France?",
+      "expected_terms": [
+        "paris"
+      ],
+      "mock_answer": "The capital of France is Paris."
     }
-  ]
+  ],
+  "_mock_answers": "mock_answer is the canned reply MockRuntime returns for that prompt. It lives here rather than in code so the fabricated part of a simulated run is declared in configuration and visible in review. No real runtime reads this field."
 }

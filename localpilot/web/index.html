@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LocalPilot</title>
+<!--
+  Everything is inline on purpose. LocalPilot serves machines that may have
+  no route to the internet, so a dashboard that needs a CDN to render would
+  contradict the tool it belongs to.
+-->
+<style>
+  :root {
+    --bg: #0b0f0c;
+    --panel: #121815;
+    --panel-2: #172019;
+    --line: #23302a;
+    --text: #e6efe9;
+    --muted: #8ba296;
+    --accent: #76b900;
+    --accent-dim: #4a7500;
+    --warn: #ffb020;
+    --bad: #ff5f56;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+  header { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+  h1 { font-size: 26px; margin: 0; letter-spacing: -0.3px; }
+  h1 span { color: var(--accent); }
+  .tag {
+    font: 600 11px/1 var(--mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--line);
+    color: var(--muted);
+  }
+  .tag.sim { color: #0b0f0c; background: var(--warn); border-color: var(--warn); }
+  .tag.real { color: #0b0f0c; background: var(--accent); border-color: var(--accent); }
+  .sub { color: var(--muted); margin: 0 0 22px; font-size: 14px; }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+  }
+  .panel h2 {
+    font: 600 12px/1 var(--mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 14px;
+  }
+
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .stat .k { font: 600 10px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .stat .v { font-size: 19px; margin-top: 5px; font-variant-numeric: tabular-nums; }
+  .stat .v small { color: var(--muted); font-size: 13px; }
+
+  form { display: flex; gap: 10px; flex-wrap: wrap; }
+  textarea, select, button, input {
+    font: inherit;
+    color: var(--text);
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  textarea { flex: 1 1 420px; min-height: 62px; resize: vertical; }
+  select { flex: 0 0 auto; }
+  button {
+    background: var(--accent);
+    color: #0b0f0c;
+    border-color: var(--accent);
+    font-weight: 650;
+    cursor: pointer;
+    padding: 10px 20px;
+  }
+  button:hover:not(:disabled) { background: #85cf00; }
+  button:disabled { opacity: 0.5; cursor: progress; }
+  button.ghost { background: transparent; color: var(--muted); border-color: var(--line); font-weight: 500; }
+  button.ghost:hover:not(:disabled) { background: var(--panel-2); color: var(--text); }
+  .examples { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .examples button { font-size: 13px; padding: 6px 11px; }
+
+  .chips { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 14px; }
+  .chip {
+    font: 12px/1 var(--mono);
+    padding: 6px 9px;
+    border-radius: 5px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--muted);
+  }
+  .chip b { color: var(--text); font-weight: 600; }
+
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 9px 8px; border-bottom: 1px solid var(--line); font-size: 14px; }
+  th { font: 600 10px/1.3 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  th:first-child, td:first-child { text-align: left; }
+  tr.winner td { background: rgba(118, 185, 0, 0.09); }
+  tr.gated td { color: var(--muted); }
+  .cid { font: 12px/1.35 var(--mono); }
+  .cid .badges { margin-top: 4px; display: flex; gap: 5px; flex-wrap: wrap; }
+  .badge {
+    font: 600 9px/1 var(--mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 5px;
+    border-radius: 3px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    color: var(--muted);
+  }
+  .badge.on { color: var(--accent); border-color: var(--accent-dim); }
+  .bar { height: 5px; border-radius: 3px; background: var(--panel-2); margin-top: 5px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--accent-dim); }
+  tr.winner .bar i { background: var(--accent); }
+
+  .trace { font: 12.5px/1.5 var(--mono); max-height: 340px; overflow-y: auto; }
+  .trace .row { display: grid; grid-template-columns: 82px 150px 1fr; gap: 10px; padding: 5px 0; border-bottom: 1px solid rgba(35,48,42,0.5); }
+  .trace .ag { color: var(--accent); }
+  .trace .ac { color: var(--muted); }
+  .trace .row.failed .ag, .trace .row.rejected .ag { color: var(--bad); }
+  .trace .row.degraded .ag { color: var(--warn); }
+
+  ul.reasons { margin: 0; padding: 0; list-style: none; font-size: 13.5px; }
+  ul.reasons li { padding: 8px 0; border-bottom: 1px solid var(--line); }
+  ul.reasons li:last-child { border-bottom: 0; }
+  ul.reasons .m { font: 12px var(--mono); color: var(--bad); }
+  ul.reasons .r { color: var(--muted); }
+
+  .banner {
+    border-radius: 8px;
+    padding: 11px 14px;
+    margin-bottom: 16px;
+    font-size: 13.5px;
+    border: 1px solid;
+  }
+  .banner.warn { background: rgba(255,176,32,0.09); border-color: rgba(255,176,32,0.4); color: #ffcf7a; }
+  .banner.bad { background: rgba(255,95,86,0.09); border-color: rgba(255,95,86,0.4); color: #ff9c96; }
+  .hidden { display: none !important; }
+  .muted { color: var(--muted); }
+  footer { color: var(--muted); font-size: 12.5px; text-align: center; margin-top: 30px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Local<span>Pilot</span></h1>
+    <span class="tag" id="platformTag">detecting…</span>
+    <span class="tag" id="modeTag">—</span>
+  </header>
+  <p class="sub">Say what you want to run locally. LocalPilot picks the engine, precision and serving
+     configuration, measures the candidates against each other, and remembers the winner.</p>
+
+  <div class="banner warn hidden" id="simBanner"></div>
+  <div class="banner bad hidden" id="errBanner"></div>
+
+  <section class="panel">
+    <h2>This machine</h2>
+    <div class="grid" id="hwGrid"><span class="muted">Loading…</span></div>
+  </section>
+
+  <section class="panel">
+    <h2>Goal</h2>
+    <form id="goalForm">
+      <textarea id="goal" placeholder="e.g. 帮我部署一个完全本地运行的代码审查 AI，代码不能离开这台电脑，响应速度优先"></textarea>
+      <select id="mode" title="Execution mode"></select>
+      <button type="submit" id="runBtn">Run autopilot</button>
+    </form>
+    <div class="examples" id="examples"></div>
+    <div class="chips hidden" id="intentChips"></div>
+  </section>
+
+  <section class="panel hidden" id="winnerPanel">
+    <h2>Chosen configuration</h2>
+    <div class="grid" id="winnerGrid"></div>
+  </section>
+
+  <section class="panel hidden" id="candPanel">
+    <h2>Candidates measured against each other</h2>
+    <div style="overflow-x:auto">
+      <table id="candTable">
+        <thead><tr>
+          <th>Configuration</th><th>TTFT</th><th>Tok/s per stream</th>
+          <th>Aggregate</th><th>Peak memory</th><th>Quality</th><th>Score</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="muted" id="candNote" style="font-size:13px;margin:12px 0 0"></p>
+  </section>
+
+  <section class="panel hidden" id="rejectPanel">
+    <h2>Ruled out, and why</h2>
+    <ul class="reasons" id="rejectList"></ul>
+  </section>
+
+  <section class="panel hidden" id="tracePanel">
+    <h2>Agent trace</h2>
+    <div class="trace" id="trace"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Remembered profiles</h2>
+    <div style="overflow-x:auto">
+      <table id="profTable">
+        <thead><tr>
+          <th>Task / priority</th><th>Configuration</th><th>TTFT</th>
+          <th>Tok/s</th><th>Score</th><th>Verified</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="muted" style="font-size:13px;margin:12px 0 0">
+      A matching profile on the same hardware fingerprint skips the search entirely.</p>
+  </section>
+
+  <footer>LocalPilot — local inference autopilot. Simulated runs are labelled and never reported as measurements.</footer>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const fmt = (v, digits = 1) => (v === null || v === undefined ? "—" : Number(v).toFixed(digits));
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+const EXAMPLES = [
+  "帮我部署一个完全本地运行的代码审查 AI，代码不能离开这台电脑，响应速度优先",
+  "我要一个本地智能体，能调用工具，20 个人同时用",
+  "我要能读整个仓库的长上下文本地模型，128k 上下文",
+  "本地图片理解，帮我认发票",
+  "I want the highest quality local coding assistant",
+];
+
+let pollTimer = null;
+
+async function api(path, options) {
+  const response = await fetch(path, options);
+  if (!response.ok) {
+    let detail = response.statusText;
+    try { detail = (await response.json()).detail || detail; } catch (_) {}
+    throw new Error(detail);
+  }
+  return response.json();
+}
+
+function showError(message) {
+  if (!message) { $("errBanner").classList.add("hidden"); return; }
+  $("errBanner").textContent = message;
+  $("errBanner").classList.remove("hidden");
+}
+
+/* ---------- hardware ---------- */
+
+async function loadHardware() {
+  const hw = await api("/v1/hardware");
+  const engines = hw.stack?.engines_available || [];
+  const accel = hw.accelerator || {};
+
+  $("platformTag").textContent = accel.names?.[0] || hw.platform_id || "unknown";
+  const tag = $("modeTag");
+  if (hw.real_execution_ready) {
+    tag.textContent = "measuring on real hardware";
+    tag.className = "tag real";
+  } else {
+    tag.textContent = "simulated";
+    tag.className = "tag sim";
+  }
+
+  const stats = [
+    ["Platform", hw.platform_id || "unknown", ""],
+    ["Memory", fmt(hw.memory?.total_gb, 0), hw.unified_memory ? "GB unified" : "GB host"],
+    ["Bandwidth", hw.memory_bandwidth_gbps ?? "—", "GB/s"],
+    ["Accelerator", accel.device_count || 0, "device(s)"],
+    ["CPU", hw.cpu?.logical_cores || "—", "cores"],
+    ["Engines found", engines.length ? engines.join(", ") : "none", ""],
+  ];
+  $("hwGrid").innerHTML = stats.map(([k, v, unit]) =>
+    `<div class="stat"><div class="k">${esc(k)}</div>
+     <div class="v">${esc(v)} ${unit ? `<small>${esc(unit)}</small>` : ""}</div></div>`).join("");
+
+  if (!hw.real_execution_ready) {
+    $("simBanner").innerHTML =
+      "<b>Simulated mode.</b> " + esc(hw.notes?.join(" ") || "") +
+      " Numbers come from a roofline model, not from this machine.";
+    $("simBanner").classList.remove("hidden");
+  } else {
+    $("simBanner").classList.add("hidden");
+  }
+
+  const modes = ["auto", "mock", ...engines];
+  $("mode").innerHTML = modes.map((m) =>
+    `<option value="${esc(m)}">${esc(m === "mock" ? "mock (simulated)" : m)}</option>`).join("");
+}
+
+/* ---------- run ---------- */
+
+async function runAutopilot(goal, mode) {
+  showError(null);
+  $("runBtn").disabled = true;
+  $("runBtn").textContent = "Running…";
+  try {
+    const intent = await api("/v1/intent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ goal }),
+    });
+    renderIntent(intent);
+
+    const job = await api("/v1/autopilot", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ goal, mode, reuse_profile: true }),
+    });
+    poll(job.job_id);
+  } catch (error) {
+    showError(error.message);
+    resetButton();
+  }
+}
+
+function resetButton() {
+  $("runBtn").disabled = false;
+  $("runBtn").textContent = "Run autopilot";
+}
+
+function poll(jobId) {
+  clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    let job;
+    try {
+      job = await api(`/v1/autopilot/${jobId}`);
+    } catch (error) {
+      clearInterval(pollTimer); showError(error.message); resetButton(); return;
+    }
+    if (job.status === "succeeded") {
+      clearInterval(pollTimer);
+      render(job.result);
+      loadProfiles();
+      resetButton();
+    } else if (job.status === "failed") {
+      clearInterval(pollTimer);
+      showError(job.error || "autopilot failed");
+      resetButton();
+    }
+  }, 600);
+}
+
+/* ---------- rendering ---------- */
+
+function renderIntent(intent) {
+  const rows = [
+    ["task", intent.task], ["priority", intent.priority],
+    ["privacy", intent.privacy], ["context", `${intent.context_length} tok`],
+    ["concurrency", intent.concurrency],
+    ["modalities", (intent.modalities || []).join("+")],
+  ];
+  if ((intent.capabilities || []).length) rows.push(["needs", intent.capabilities.join(", ")]);
+  $("intentChips").innerHTML = rows.map(([k, v]) =>
+    `<span class="chip">${esc(k)} <b>${esc(v)}</b></span>`).join("");
+  $("intentChips").classList.remove("hidden");
+}
+
+function render(result) {
+  if (!result) return;
+  renderIntent(result.intent);
+  renderWinner(result);
+  renderCandidates(result);
+  renderRejections(result);
+  renderTrace(result.agent_trace || []);
+}
+
+function renderWinner(result) {
+  const best = result.best_profile || {};
+  const cand = best.candidate || {};
+  const bench = best.benchmark || {};
+  const spec = cand.runtime_config && cand.runtime_config.speculative;
+
+  const stats = [
+    ["Model", cand.model_id, ""],
+    ["Engine", cand.engine, ""],
+    ["Precision", cand.precision, ""],
+    ["Context", cand.context_length, "tok"],
+    ["TTFT", fmt(bench.ttft_ms, 0), "ms"],
+    ["Decode", fmt(bench.throughput_tokens_s), "tok/s"],
+    ["Peak memory", fmt(bench.peak_memory_gb), "GB"],
+    ["Score", fmt(best.score, 1), "/100"],
+  ];
+  if (spec) stats.push(["Speculative", "on", `draft ${String(spec.draft_source_id || "").split("/").pop()}`]);
+  if (result.profile_reused) stats.unshift(["Source", "PROFILE HIT", "search skipped"]);
+
+  $("winnerGrid").innerHTML = stats.map(([k, v, unit]) =>
+    `<div class="stat"><div class="k">${esc(k)}</div>
+     <div class="v">${esc(v)} ${unit ? `<small>${esc(unit)}</small>` : ""}</div></div>`).join("");
+  $("winnerPanel").classList.remove("hidden");
+}
+
+function renderCandidates(result) {
+  const rows = result.candidates || [];
+  const winnerId = result.best_profile?.candidate?.candidate_id;
+  const measured = rows.filter((r) => r.benchmark);
+  const max = (pick) => Math.max(...measured.map(pick), 0) || 1;
+  const maxTps = max((r) => r.benchmark.throughput_tokens_s);
+  const maxAgg = max((r) => r.benchmark.aggregate_throughput_tokens_s || 0);
+  const maxMem = max((r) => r.benchmark.peak_memory_gb);
+  const maxTtft = max((r) => r.benchmark.ttft_ms);
+
+  const bar = (value, ceiling) =>
+    `<div class="bar"><i style="width:${Math.max(2, Math.min(100, (value / ceiling) * 100))}%"></i></div>`;
+
+  $("candTable").querySelector("tbody").innerHTML = rows.map((row) => {
+    const cand = row.candidate || {};
+    const bench = row.benchmark;
+    const isWinner = cand.candidate_id === winnerId;
+    const gated = (row.gate_failures || []).length > 0;
+
+    const badges = [
+      `<span class="badge">${esc(cand.engine)}</span>`,
+      `<span class="badge">${esc(cand.precision)}</span>`,
+      cand.concurrency > 1 ? `<span class="badge">batch ${cand.concurrency}</span>` : "",
+      cand.runtime_config?.speculative ? `<span class="badge on">spec decode</span>` : "",
+      cand.kv_cache_dtype && cand.kv_cache_dtype !== "auto" ? `<span class="badge on">kv ${esc(cand.kv_cache_dtype)}</span>` : "",
+      cand.recovery_action ? `<span class="badge">recovery</span>` : "",
+    ].join("");
+
+    const name = `<div class="cid">${esc(cand.model_id)}<div class="badges">${badges}</div></div>`;
+
+    if (!bench) {
+      return `<tr class="gated"><td>${name}</td>
+        <td colspan="6" style="text-align:left;color:var(--bad)">${esc(row.error || "failed")}</td></tr>`;
+    }
+    return `<tr class="${isWinner ? "winner" : ""}${gated ? " gated" : ""}">
+      <td>${name}</td>
+      <td>${fmt(bench.ttft_ms, 0)} ms${bar(maxTtft - bench.ttft_ms + 1, maxTtft)}</td>
+      <td>${fmt(bench.throughput_tokens_s)}${bar(bench.throughput_tokens_s, maxTps)}</td>
+      <td>${bench.aggregate_throughput_tokens_s ? fmt(bench.aggregate_throughput_tokens_s) + bar(bench.aggregate_throughput_tokens_s, maxAgg) : "—"}</td>
+      <td>${fmt(bench.peak_memory_gb)} GB${bar(bench.peak_memory_gb, maxMem)}</td>
+      <td>${fmt(bench.quality, 2)}${bench.quality_judge !== null && bench.quality_judge !== undefined ? `<div class="badge" style="margin-top:4px">rubric ${fmt(bench.quality_judge, 2)}</div>` : ""}</td>
+      <td>${row.score !== null && row.score !== undefined ? fmt(row.score, 1) : `<span class="muted" title="${esc((row.gate_failures || []).join("; "))}">gated</span>`}</td>
+    </tr>`;
+  }).join("");
+
+  const engines = new Set(rows.map((r) => r.candidate?.engine));
+  const models = new Set(rows.map((r) => r.candidate?.model_id));
+  $("candNote").textContent =
+    `${rows.length} configurations across ${models.size} model(s) and ${engines.size} engine(s). ` +
+    (result.hardware?.simulated
+      ? "Simulated: modelled from bandwidth and active parameters per token, not measured."
+      : "Measured on this machine through each engine's OpenAI-compatible endpoint.");
+  $("candPanel").classList.remove("hidden");
+}
+
+function renderRejections(result) {
+  const rejections = (result.agent_trace || []).filter((s) => s.action === "reject_model");
+  if (!rejections.length) { $("rejectPanel").classList.add("hidden"); return; }
+  $("rejectList").innerHTML = rejections.map((step) =>
+    `<li><span class="m">${esc(step.data?.model_id || "")}</span>
+      <span class="badge">${esc(step.data?.gate || "")}</span>
+      <div class="r">${esc(step.data?.reason || step.detail)}</div></li>`).join("");
+  $("rejectPanel").classList.remove("hidden");
+}
+
+function renderTrace(trace) {
+  $("trace").innerHTML = trace.map((step) =>
+    `<div class="row ${esc(step.status)}">
+       <span class="ag">${esc(step.agent)}</span>
+       <span class="ac">${esc(step.action)}</span>
+       <span>${esc(step.detail)}</span>
+     </div>`).join("");
+  $("tracePanel").classList.remove("hidden");
+}
+
+async function loadProfiles() {
+  try {
+    const { data } = await api("/v1/profiles");
+    $("profTable").querySelector("tbody").innerHTML = data.length
+      ? data.map((p) => `<tr>
+          <td>${esc(p.task)} / ${esc(p.priority)}${p.simulated ? ' <span class="badge">sim</span>' : ""}</td>
+          <td class="cid">${esc(p.model_id)} · ${esc(p.engine)} · ${esc(p.precision)}</td>
+          <td>${fmt(p.ttft_ms, 0)} ms</td>
+          <td>${fmt(p.throughput_tokens_s)}</td>
+          <td>${fmt(p.score, 1)}</td>
+          <td class="muted">${esc((p.last_verified_at || "").slice(0, 19).replace("T", " "))}</td>
+        </tr>`).join("")
+      : `<tr><td colspan="6" class="muted">Nothing remembered yet.</td></tr>`;
+  } catch (error) {
+    /* the panel stays empty; the run itself already reports failures */
+  }
+}
+
+/* ---------- boot ---------- */
+
+$("examples").innerHTML = EXAMPLES.map((text, index) =>
+  `<button class="ghost" type="button" data-i="${index}">${esc(text.slice(0, 30))}…</button>`).join("");
+$("examples").addEventListener("click", (event) => {
+  const index = event.target.dataset.i;
+  if (index !== undefined) $("goal").value = EXAMPLES[index];
+});
+
+$("goalForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const goal = $("goal").value.trim();
+  if (goal) runAutopilot(goal, $("mode").value);
+});
+
+loadHardware().catch((error) => showError(error.message));
+loadProfiles();
+</script>
+</body>
+</html>

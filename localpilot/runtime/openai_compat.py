@@ -1,0 +1,522 @@
+from __future__ import annotations
+
+import json
+import os
+import signal
+import subprocess
+import threading
+import time
+import urllib.error
+import urllib.request
+from dataclasses import dataclass
+from statistics import mean
+from typing import Any, Dict, List, Optional, Tuple
+
+from localpilot.engines.registry import EngineRegistry, EngineSpec
+from localpilot.runtime.base import RuntimeProvider, RuntimeUnavailable
+from localpilot.schemas import BenchmarkMetrics, CandidatePlan
+
+
+DEFAULT_PORT = 8_100
+HEALTH_TIMEOUT_SECONDS = float(os.environ.get("LOCALPILOT_ENGINE_TIMEOUT", "900"))
+
+
+@dataclass
+class StreamSample:
+    ttft_ms: float
+    total_ms: float
+    output_tokens: int
+    ok: bool
+    error: Optional[str] = None
+
+    @property
+    def decode_ms(self) -> float:
+        return max(0.0, self.total_ms - self.ttft_ms)
+
+    @property
+    def tokens_per_second(self) -> Optional[float]:
+        if self.output_tokens <= 1 or self.decode_ms <= 0:
+            return None
+        return (self.output_tokens - 1) / (self.decode_ms / 1000)
+
+
+def _percentile(values: List[float], fraction: float) -> Optional[float]:
+    if not values:
+        return None
+    ordered = sorted(values)
+    index = min(len(ordered) - 1, max(0, int(round(fraction * (len(ordered) - 1)))))
+    return ordered[index]
+
+
+class OpenAICompatRuntime(RuntimeProvider):
+    """Drives any engine that speaks the OpenAI HTTP API.
+
+    Measuring through one wire protocol is what makes a cross-engine
+    comparison honest: time-to-first-token and inter-token latency are
+    observed the same way whether the server is vLLM, TensorRT-LLM, SGLang
+    or a NIM container, so a difference in the numbers is a difference in
+    the engine rather than in the harness.
+
+    Attaching to a server the user already started is the default. Starting
+    one is opt-in, because ``vllm serve <repo>`` downloads weights, and
+    nothing here may pull tens of gigabytes without being asked.
+    """
+
+    engine_id: str = ""
+
+    def __init__(self, engine_registry: EngineRegistry = None) -> None:
+        self.engines = engine_registry or EngineRegistry()
+        self.candidate: Optional[CandidatePlan] = None
+        self.spec: Optional[EngineSpec] = None
+        self.base_url: Optional[str] = None
+        self.process: Optional[subprocess.Popen] = None
+        self.launch_command: Optional[List[str]] = None
+        self.model_name: Optional[str] = None
+        self._owns_server = False
+
+    # ------------------------------------------------------------------
+    # lifecycle
+
+    def _engine_id_for(self, candidate: CandidatePlan) -> str:
+        return self.engine_id or candidate.engine
+
+    def _configured_base_url(self, engine_id: str) -> Optional[str]:
+        for variable in (
+            f"LOCALPILOT_{engine_id.upper()}_BASE_URL",
+            "LOCALPILOT_ENGINE_BASE_URL",
+        ):
+            value = os.environ.get(variable)
+            if value:
+                return value.rstrip("/")
+        return None
+
+    def load_model(self, candidate: CandidatePlan) -> None:
+        if candidate.simulated:
+            raise ValueError(
+                f"{type(self).__name__} refuses simulated candidates"
+            )
+        engine_id = self._engine_id_for(candidate)
+        self.spec = self.engines.get(engine_id)
+        if not self.spec.openai_base_path:
+            raise RuntimeUnavailable(
+                f"{engine_id} does not expose an OpenAI-compatible endpoint"
+            )
+        self.candidate = candidate
+        self.model_name = candidate.source_id
+
+        configured = self._configured_base_url(engine_id)
+        if configured:
+            self.base_url = configured
+            self._owns_server = False
+            return
+
+        command = self.build_launch_command(candidate)
+        self.launch_command = command
+        if os.environ.get("LOCALPILOT_ALLOW_ENGINE_LAUNCH") != "1":
+            raise RuntimeUnavailable(
+                f"No running {engine_id} server was configured, and LocalPilot "
+                "will not start one implicitly because that downloads model "
+                "weights.\n"
+                f"  Either export LOCALPILOT_{engine_id.upper()}_BASE_URL="
+                "http://127.0.0.1:8000 for a server you already run,\n"
+                "  or set LOCALPILOT_ALLOW_ENGINE_LAUNCH=1 to let LocalPilot "
+                "run:\n"
+                f"    {' '.join(command)}"
+            )
+        self.base_url = f"http://127.0.0.1:{self._port()}"
+        self._owns_server = True
+
+    def _port(self) -> int:
+        return int(os.environ.get("LOCALPILOT_ENGINE_PORT", DEFAULT_PORT))
+
+    def build_launch_command(self, candidate: CandidatePlan) -> List[str]:
+        """Renders the engine's configured launch template.
+
+        Returned even when launching is refused, so the message can show the
+        user the exact command and let them decide.
+        """
+        spec = self.spec or self.engines.get(self._engine_id_for(candidate))
+        launch = spec.launch or {}
+        context = {
+            "source_id": candidate.source_id,
+            "model_path": candidate.model_path or candidate.source_id,
+            "context_length": candidate.context_length,
+            "max_num_seqs": candidate.runtime_config.get("max_num_seqs", 1),
+            "gpu_memory_utilization": candidate.runtime_config.get(
+                "gpu_memory_utilization", 0.9
+            ),
+            "kv_cache_dtype": candidate.kv_cache_dtype,
+            "port": self._port(),
+        }
+
+        def render(value: Any) -> str:
+            text = str(value)
+            for key, replacement in context.items():
+                text = text.replace("{" + key + "}", str(replacement))
+            return text
+
+        command = [render(part) for part in launch.get("command", [])]
+        for flag, template in (launch.get("arguments") or {}).items():
+            rendered = render(template)
+            if "{" in rendered:
+                continue
+            command.extend([flag, rendered])
+
+        flags = launch.get("flags") or {}
+        if candidate.runtime_config.get("enable_prefix_caching") and flags.get(
+            "prefix_caching"
+        ):
+            command.append(flags["prefix_caching"])
+
+        speculative = candidate.runtime_config.get("speculative")
+        if speculative and (launch.get("speculative") or {}):
+            draft_context = {
+                "draft_source_id": speculative.get("draft_source_id", ""),
+                "num_speculative_tokens": speculative.get(
+                    "num_speculative_tokens", 3
+                ),
+            }
+            for flag, template in launch["speculative"].items():
+                rendered = str(template)
+                for key, replacement in draft_context.items():
+                    rendered = rendered.replace("{" + key + "}", str(replacement))
+                command.extend([flag, rendered])
+        return command
+
+    def start_model(self) -> None:
+        if self.candidate is None or self.base_url is None:
+            raise RuntimeError("No model loaded")
+        if self._owns_server and self.process is None:
+            self.process = subprocess.Popen(
+                self.launch_command,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+        self._wait_for_health()
+
+    def _wait_for_health(self) -> None:
+        deadline = time.monotonic() + HEALTH_TIMEOUT_SECONDS
+        last_error = None
+        while time.monotonic() < deadline:
+            if self.process is not None and self.process.poll() is not None:
+                raise RuntimeUnavailable(
+                    f"{self.spec.engine_id} exited with code "
+                    f"{self.process.returncode} before becoming healthy"
+                )
+            try:
+                self._get(self.spec.health_path or "/health")
+                return
+            except Exception as exc:
+                last_error = exc
+                time.sleep(2.0)
+        raise RuntimeUnavailable(
+            f"{self.spec.engine_id} did not become healthy within "
+            f"{HEALTH_TIMEOUT_SECONDS:.0f}s: {last_error}"
+        )
+
+    def stop_model(self) -> None:
+        if self.process is not None:
+            try:
+                os.killpg(os.getpgid(self.process.pid), signal.SIGTERM)
+                self.process.wait(timeout=60)
+            except (OSError, subprocess.TimeoutExpired):
+                try:
+                    os.killpg(os.getpgid(self.process.pid), signal.SIGKILL)
+                except OSError:
+                    pass
+            finally:
+                self.process = None
+        self.candidate = None
+        self.base_url = None
+        self._owns_server = False
+
+    def health_check(self) -> Dict[str, Any]:
+        if self.base_url is None or self.spec is None:
+            return {"healthy": False, "runtime": self.engine_id, "simulated": False}
+        try:
+            self._get(self.spec.health_path or "/health")
+            healthy = True
+            detail = None
+        except Exception as exc:
+            healthy = False
+            detail = f"{type(exc).__name__}: {exc}"
+        return {
+            "healthy": healthy,
+            "runtime": self.spec.engine_id,
+            "simulated": False,
+            "base_url": self.base_url,
+            "managed_by_localpilot": self._owns_server,
+            "device": self.candidate.device if self.candidate else None,
+            "detail": detail,
+        }
+
+    # ------------------------------------------------------------------
+    # HTTP
+
+    def _get(self, path: str, timeout: float = 10.0) -> Any:
+        request = urllib.request.Request(f"{self.base_url}{path}", method="GET")
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            body = response.read().decode("utf-8", "replace")
+        try:
+            return json.loads(body) if body else {}
+        except json.JSONDecodeError:
+            return body
+
+    def _completions_path(self) -> str:
+        base = (self.spec.openai_base_path or "/v1").rstrip("/")
+        return f"{base}/chat/completions"
+
+    def _payload(
+        self, prompt: str, max_new_tokens: int, stream: bool
+    ) -> Dict[str, Any]:
+        payload = {
+            "model": self.model_name,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_tokens": max_new_tokens,
+            "temperature": 0.0,
+            "stream": stream,
+        }
+        if stream:
+            payload["stream_options"] = {"include_usage": True}
+        return payload
+
+    def generate(self, prompt: str, max_new_tokens: int = 64) -> str:
+        if self.base_url is None:
+            raise RuntimeError(f"{self.engine_id} runtime is not started")
+        body = json.dumps(self._payload(prompt, max_new_tokens, False)).encode()
+        request = urllib.request.Request(
+            f"{self.base_url}{self._completions_path()}",
+            data=body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(request, timeout=300) as response:
+            data = json.loads(response.read().decode("utf-8", "replace"))
+        choices = data.get("choices") or []
+        if not choices:
+            return ""
+        return str(choices[0].get("message", {}).get("content", ""))
+
+    def _stream_once(self, prompt: str, max_new_tokens: int) -> StreamSample:
+        body = json.dumps(self._payload(prompt, max_new_tokens, True)).encode()
+        request = urllib.request.Request(
+            f"{self.base_url}{self._completions_path()}",
+            data=body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        started = time.perf_counter()
+        first_token_at: Optional[float] = None
+        delta_count = 0
+        reported_tokens: Optional[int] = None
+        try:
+            with urllib.request.urlopen(request, timeout=600) as response:
+                for raw in response:
+                    line = raw.decode("utf-8", "replace").strip()
+                    if not line or not line.startswith("data:"):
+                        continue
+                    chunk = line[5:].strip()
+                    if chunk == "[DONE]":
+                        break
+                    try:
+                        event = json.loads(chunk)
+                    except json.JSONDecodeError:
+                        continue
+                    usage = event.get("usage")
+                    if isinstance(usage, dict) and usage.get("completion_tokens"):
+                        reported_tokens = int(usage["completion_tokens"])
+                    for choice in event.get("choices") or []:
+                        content = (choice.get("delta") or {}).get("content")
+                        if content:
+                            if first_token_at is None:
+                                first_token_at = time.perf_counter()
+                            delta_count += 1
+        except (urllib.error.URLError, OSError, TimeoutError) as exc:
+            return StreamSample(0.0, 0.0, 0, False, f"{type(exc).__name__}: {exc}")
+
+        finished = time.perf_counter()
+        if first_token_at is None:
+            return StreamSample(
+                0.0,
+                (finished - started) * 1000,
+                0,
+                False,
+                "stream produced no content",
+            )
+        # The server's own token count beats counting SSE frames, which can
+        # batch several tokens into one delta.
+        tokens = reported_tokens or delta_count
+        return StreamSample(
+            ttft_ms=(first_token_at - started) * 1000,
+            total_ms=(finished - started) * 1000,
+            output_tokens=tokens,
+            ok=True,
+        )
+
+    def _stream_concurrent(
+        self, prompt: str, max_new_tokens: int, concurrency: int
+    ) -> Tuple[List[StreamSample], float]:
+        samples: List[Optional[StreamSample]] = [None] * concurrency
+
+        def worker(slot: int) -> None:
+            samples[slot] = self._stream_once(prompt, max_new_tokens)
+
+        threads = [
+            threading.Thread(target=worker, args=(slot,), daemon=True)
+            for slot in range(concurrency)
+        ]
+        wall_start = time.perf_counter()
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        wall_ms = (time.perf_counter() - wall_start) * 1000
+        return [sample for sample in samples if sample is not None], wall_ms
+
+    # ------------------------------------------------------------------
+    # measurement
+
+    def benchmark(
+        self,
+        prompts: List[Dict[str, Any]],
+        warmup_runs: int,
+        measured_runs: int,
+        max_new_tokens: int,
+    ) -> BenchmarkMetrics:
+        if self.base_url is None or self.candidate is None:
+            raise RuntimeError(f"{self.engine_id} runtime is not started")
+
+        primary = prompts[0]["text"]
+        concurrency = max(1, self.candidate.concurrency)
+
+        for _ in range(max(0, warmup_runs)):
+            self._stream_once(primary, max_new_tokens)
+
+        all_samples: List[StreamSample] = []
+        wall_times: List[float] = []
+        for _ in range(max(1, measured_runs)):
+            if concurrency == 1:
+                sample = self._stream_once(primary, max_new_tokens)
+                all_samples.append(sample)
+                wall_times.append(sample.total_ms)
+            else:
+                batch, wall_ms = self._stream_concurrent(
+                    primary, max_new_tokens, concurrency
+                )
+                all_samples.extend(batch)
+                wall_times.append(wall_ms)
+
+        successes = [sample for sample in all_samples if sample.ok]
+        if not successes:
+            errors = {sample.error for sample in all_samples if sample.error}
+            raise RuntimeError(
+                "every measured request failed: " + "; ".join(sorted(errors))
+            )
+
+        ttfts = [sample.ttft_ms for sample in successes]
+        per_stream = [
+            rate
+            for rate in (sample.tokens_per_second for sample in successes)
+            if rate
+        ]
+        tokens_total = sum(sample.output_tokens for sample in successes)
+
+        throughput = mean(per_stream) if per_stream else 0.0
+
+        # Aggregate throughput is every token the server produced divided by
+        # the wall time it took, so concurrent streams count once each. This
+        # is the number that improves with batching while per-stream speed
+        # gets worse.
+        aggregate = None
+        total_wall_seconds = sum(wall_times) / 1000
+        if total_wall_seconds > 0 and tokens_total:
+            aggregate = round(tokens_total / total_wall_seconds, 2)
+
+        quality_hits = 0
+        for prompt in prompts:
+            response = self.generate(prompt["text"], max_new_tokens).lower()
+            if any(term.lower() in response for term in prompt["expected_terms"]):
+                quality_hits += 1
+        keyword_quality = quality_hits / max(1, len(prompts))
+
+        peak_memory_gb, cpu_percent = self._resource_usage()
+
+        return BenchmarkMetrics(
+            ttft_ms=round(mean(ttfts), 2),
+            tpot_ms=round(1000 / throughput, 2) if throughput else 0.0,
+            throughput_tokens_s=round(throughput, 2),
+            total_latency_ms=round(mean([s.total_ms for s in successes]), 2),
+            peak_memory_gb=round(peak_memory_gb, 2),
+            cpu_usage_percent=cpu_percent,
+            stability=round(len(successes) / max(1, len(all_samples)), 3),
+            quality=round(keyword_quality, 3),
+            runs=measured_runs,
+            warmup_runs=warmup_runs,
+            simulated=False,
+            raw={
+                "engine": self.spec.engine_id,
+                "base_url": self.base_url,
+                "managed_by_localpilot": self._owns_server,
+                "requests": len(all_samples),
+                "output_tokens_total": tokens_total,
+                "launch_command": self.launch_command,
+            },
+            ttft_p95_ms=(
+                round(_percentile(ttfts, 0.95), 2)
+                if _percentile(ttfts, 0.95) is not None
+                else None
+            ),
+            concurrency=concurrency,
+            aggregate_throughput_tokens_s=aggregate,
+            quality_keyword=round(keyword_quality, 3),
+        )
+
+    def _resource_usage(self) -> Tuple[float, Optional[float]]:
+        """Reports accelerator memory, falling back to the host view.
+
+        The engine runs in its own process, so this process's RSS says
+        nothing. On a unified-memory machine the accelerator reading is the
+        one that matters anyway.
+        """
+        try:
+            import pynvml
+
+            pynvml.nvmlInit()
+            try:
+                handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+                info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+                used_gb = info.used / (1024**3)
+            finally:
+                pynvml.nvmlShutdown()
+        except Exception:
+            used_gb = float(self.candidate.expected_memory_gb)
+
+        cpu_percent = None
+        try:
+            import psutil
+
+            cpu_percent = float(psutil.cpu_percent(interval=0.1))
+        except ImportError:
+            pass
+        return used_gb, cpu_percent
+
+
+class VLLMRuntime(OpenAICompatRuntime):
+    engine_id = "vllm"
+
+
+class TRTLLMRuntime(OpenAICompatRuntime):
+    engine_id = "trtllm"
+
+
+class SGLangRuntime(OpenAICompatRuntime):
+    engine_id = "sglang"
+
+
+class NIMRuntime(OpenAICompatRuntime):
+    engine_id = "nim"
+
+
+class LlamaCppRuntime(OpenAICompatRuntime):
+    engine_id = "llamacpp"

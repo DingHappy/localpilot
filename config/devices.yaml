@@ -1,10 +1,32 @@
 {
   "devices": {
-    "CPU": {"kind": "cpu", "fallback_rank": 3},
-    "GPU": {"kind": "gpu", "fallback_rank": 1},
-    "NPU": {"kind": "npu", "fallback_rank": 2},
-    "AUTO": {"kind": "router", "benchmark_allowed": false}
+    "CUDA": {"kind": "gpu", "fallback_rank": 1},
+    "CPU": {"kind": "cpu", "fallback_rank": 2}
   },
-  "mock_available_devices": ["CPU", "GPU", "NPU"]
-}
 
+  "mock_available_devices": ["CUDA", "CPU"],
+
+  "platforms": {
+    "dgx_spark": {
+      "display_name": "NVIDIA DGX Spark (GB10)",
+      "detect": {
+        "gpu_name_contains": ["GB10"],
+        "device_tree_model_contains": ["DGX Spark", "NVIDIA DGX Spark"],
+        "architecture": ["aarch64", "arm64"]
+      },
+      "unified_memory": true,
+      "memory_bandwidth_gbps": 273,
+      "compute_capability": "12.1",
+      "notes": "One coherent 128 GB LPDDR5x pool shared by a 20-core Grace CPU and a Blackwell GPU. Capacity is unusually large for the form factor while bandwidth stays far below HBM, so decode is bandwidth-bound long before it is compute-bound. Published figures; confirm against the target before quoting them."
+    },
+    "cuda_discrete": {
+      "display_name": "Discrete NVIDIA GPU",
+      "detect": {},
+      "unified_memory": false,
+      "memory_bandwidth_gbps": null,
+      "notes": "Fallback description for any other CUDA device. Capacity is the board's own VRAM, not host RAM."
+    }
+  },
+
+  "mock_platform": "dgx_spark"
+}

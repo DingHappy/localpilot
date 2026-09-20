@@ -5,42 +5,38 @@ import os
 import platform
 import shutil
 import subprocess
-from typing import Any, Dict, List, Tuple
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
+from localpilot.engines.registry import EngineRegistry
 from localpilot.schemas import DeviceInfo, HardwareProfile
-from localpilot.utils import stable_hash
+from localpilot.utils import load_data_file, project_home, stable_hash
 
 
-def _native_machine() -> str:
+def _run(command: List[str], timeout: float = 4.0) -> Optional[str]:
     try:
         result = subprocess.run(
-            ["uname", "-m"],
+            command,
             check=True,
             capture_output=True,
             text=True,
-            timeout=2,
+            timeout=timeout,
         )
-        if result.stdout.strip():
-            return result.stdout.strip()
     except (OSError, subprocess.SubprocessError):
-        pass
-    return platform.machine() or "unknown"
+        return None
+    output = result.stdout.strip()
+    return output or None
+
+
+def _native_machine() -> str:
+    return _run(["uname", "-m"]) or platform.machine() or "unknown"
 
 
 def _cpu_model(native_machine: str) -> str:
     if platform.system() == "Darwin":
-        try:
-            result = subprocess.run(
-                ["sysctl", "-n", "machdep.cpu.brand_string"],
-                check=True,
-                capture_output=True,
-                text=True,
-                timeout=2,
-            )
-            if result.stdout.strip():
-                return result.stdout.strip()
-        except (OSError, subprocess.SubprocessError):
-            pass
+        brand = _run(["sysctl", "-n", "machdep.cpu.brand_string"])
+        if brand:
+            return brand
         if native_machine == "arm64":
             return "Apple Silicon (arm64)"
     model = platform.processor().strip()
@@ -50,8 +46,11 @@ def _cpu_model(native_machine: str) -> str:
         try:
             with open("/proc/cpuinfo", encoding="utf-8") as handle:
                 for line in handle:
-                    if line.lower().startswith("model name"):
+                    lowered = line.lower()
+                    if lowered.startswith("model name"):
                         return line.split(":", 1)[1].strip()
+                    if lowered.startswith("cpu part"):
+                        return f"ARM CPU part {line.split(':', 1)[1].strip()}"
         except OSError:
             pass
     return platform.machine() or "unknown"
@@ -94,95 +93,377 @@ def _cpu_workload() -> Dict[str, Any]:
             return {"usage_percent": None}
 
 
-def _openvino_devices() -> Tuple[Dict[str, Any], List[DeviceInfo]]:
-    if importlib.util.find_spec("openvino") is None:
-        return (
-            {"installed": False, "version": None, "available_devices": []},
-            [],
-        )
+def _device_tree_model() -> Optional[str]:
+    path = Path("/proc/device-tree/model")
+    try:
+        return path.read_text(errors="ignore").replace("\x00", "").strip() or None
+    except OSError:
+        return None
+
+
+def _cuda_via_pynvml() -> Tuple[Optional[Dict[str, Any]], List[DeviceInfo]]:
+    if importlib.util.find_spec("pynvml") is None:
+        return None, []
+    try:
+        import pynvml
+
+        pynvml.nvmlInit()
+    except Exception:
+        return None, []
 
     try:
-        import openvino
-
-        core = openvino.Core()
-        available = list(core.available_devices)
-        devices = []
-        for device_id in available:
+        driver = pynvml.nvmlSystemGetDriverVersion()
+        if isinstance(driver, bytes):
+            driver = driver.decode()
+        count = pynvml.nvmlDeviceGetCount()
+        devices: List[DeviceInfo] = []
+        total_memory_gb = 0.0
+        names = []
+        for index in range(count):
+            handle = pynvml.nvmlDeviceGetHandleByIndex(index)
+            name = pynvml.nvmlDeviceGetName(handle)
+            if isinstance(name, bytes):
+                name = name.decode()
+            info = pynvml.nvmlDeviceGetMemoryInfo(handle)
+            memory_gb = round(info.total / (1024**3), 2)
+            total_memory_gb += memory_gb
+            names.append(name)
             try:
-                name = str(core.get_property(device_id, "FULL_DEVICE_NAME"))
+                major, minor = pynvml.nvmlDeviceGetCudaComputeCapability(handle)
+                capability = f"{major}.{minor}"
             except Exception:
-                name = device_id
-            kind = device_id.split(".", 1)[0].lower()
+                capability = None
+            try:
+                utilization = pynvml.nvmlDeviceGetUtilizationRates(handle).gpu
+            except Exception:
+                utilization = None
             devices.append(
                 DeviceInfo(
-                    id=device_id,
-                    kind=kind,
+                    id=f"CUDA.{index}" if count > 1 else "CUDA",
+                    kind="gpu",
                     name=name,
                     available=True,
-                    properties={"utilization_percent": None},
+                    properties={
+                        "index": index,
+                        "memory_total_gb": memory_gb,
+                        "memory_free_gb": round(info.free / (1024**3), 2),
+                        "compute_capability": capability,
+                        "utilization_percent": utilization,
+                    },
                 )
             )
-        version = getattr(openvino, "__version__", None)
         return (
             {
-                "installed": True,
-                "version": version,
-                "available_devices": available,
+                "detected": bool(devices),
+                "source": "pynvml",
+                "driver_version": driver,
+                "device_count": count,
+                "names": names,
+                "memory_total_gb": round(total_memory_gb, 2) or None,
             },
             devices,
         )
     except Exception as exc:
         return (
             {
-                "installed": True,
-                "version": None,
-                "available_devices": [],
+                "detected": False,
+                "source": "pynvml",
                 "error": f"{type(exc).__name__}: {exc}",
             },
             [],
         )
+    finally:
+        try:
+            import pynvml
+
+            pynvml.nvmlShutdown()
+        except Exception:
+            pass
+
+
+def _cuda_via_smi() -> Tuple[Optional[Dict[str, Any]], List[DeviceInfo]]:
+    if shutil.which("nvidia-smi") is None:
+        return None, []
+    output = _run(
+        [
+            "nvidia-smi",
+            "--query-gpu=index,name,memory.total,memory.free,"
+            "compute_cap,utilization.gpu,driver_version",
+            "--format=csv,noheader,nounits",
+        ],
+        timeout=10.0,
+    )
+    if not output:
+        return None, []
+
+    devices: List[DeviceInfo] = []
+    names: List[str] = []
+    total_memory_gb = 0.0
+    driver = None
+    rows = [line for line in output.splitlines() if line.strip()]
+    for line in rows:
+        parts = [part.strip() for part in line.split(",")]
+        if len(parts) < 7:
+            continue
+        index, name, total_mib, free_mib, capability, utilization, driver = parts[:7]
+        try:
+            memory_gb = round(float(total_mib) / 1024, 2)
+            free_gb = round(float(free_mib) / 1024, 2)
+        except ValueError:
+            memory_gb, free_gb = 0.0, 0.0
+        total_memory_gb += memory_gb
+        names.append(name)
+        devices.append(
+            DeviceInfo(
+                id=f"CUDA.{index}" if len(rows) > 1 else "CUDA",
+                kind="gpu",
+                name=name,
+                available=True,
+                properties={
+                    "index": int(index) if index.isdigit() else index,
+                    "memory_total_gb": memory_gb,
+                    "memory_free_gb": free_gb,
+                    "compute_capability": capability,
+                    "utilization_percent": (
+                        float(utilization) if utilization.replace(".", "").isdigit()
+                        else None
+                    ),
+                },
+            )
+        )
+    return (
+        {
+            "detected": bool(devices),
+            "source": "nvidia-smi",
+            "driver_version": driver,
+            "device_count": len(devices),
+            "names": names,
+            "memory_total_gb": round(total_memory_gb, 2) or None,
+        },
+        devices,
+    )
+
+
+def _detect_cuda() -> Tuple[Dict[str, Any], List[DeviceInfo]]:
+    for probe in (_cuda_via_pynvml, _cuda_via_smi):
+        accelerator, devices = probe()
+        if accelerator and accelerator.get("detected"):
+            return accelerator, devices
+    return {"detected": False, "source": None, "device_count": 0, "names": []}, []
+
+
+def _cuda_toolkit() -> Dict[str, Any]:
+    version = None
+    output = _run(["nvcc", "--version"])
+    if output:
+        for token in output.replace(",", " ").split():
+            if token.startswith("V") and token[1:2].isdigit():
+                version = token[1:]
+                break
+    torch_cuda = None
+    if importlib.util.find_spec("torch") is not None:
+        torch_cuda = "installed"
+    return {
+        "nvcc_version": version,
+        "nvcc_path": shutil.which("nvcc"),
+        "torch": torch_cuda,
+        "container_runtime": shutil.which("docker") or shutil.which("podman"),
+    }
 
 
 class HardwareProfiler:
+    def __init__(
+        self,
+        engine_registry: EngineRegistry = None,
+        devices_path: Path = None,
+    ) -> None:
+        self.engines = engine_registry or EngineRegistry()
+        self.devices_path = devices_path or (
+            project_home() / "config" / "devices.yaml"
+        )
+
+    def _device_config(self) -> Dict[str, Any]:
+        try:
+            return load_data_file(self.devices_path)
+        except (OSError, ValueError, RuntimeError):
+            return {}
+
+    def _identify_platform(
+        self,
+        accelerator: Dict[str, Any],
+        native_machine: str,
+        config: Dict[str, Any],
+    ) -> Tuple[str, Dict[str, Any]]:
+        platforms = config.get("platforms", {})
+        gpu_names = " ".join(accelerator.get("names") or []).upper()
+        tree_model = (_device_tree_model() or "").upper()
+
+        for platform_id, spec in platforms.items():
+            detect = spec.get("detect") or {}
+            if not detect:
+                continue
+            name_hit = any(
+                token.upper() in gpu_names
+                for token in detect.get("gpu_name_contains", [])
+            )
+            tree_hit = any(
+                token.upper() in tree_model
+                for token in detect.get("device_tree_model_contains", [])
+            )
+            if name_hit or tree_hit:
+                return platform_id, spec
+
+        if accelerator.get("detected"):
+            return "cuda_discrete", platforms.get("cuda_discrete", {})
+        return "unknown", {}
+
     def profile(self, simulate: bool = False) -> HardwareProfile:
+        config = self._device_config()
         native_machine = _native_machine()
         cpu_model = _cpu_model(native_machine)
         memory = _memory()
         disk_usage = shutil.disk_usage(os.getcwd())
-        openvino_info, devices = _openvino_devices()
-        notes = []
+        engine_reports = self.engines.probe_all()
+        notes: List[str] = []
 
         if simulate:
-            devices = [
-                DeviceInfo("CPU", "cpu", "Simulated Intel CPU", True),
-                DeviceInfo("GPU", "gpu", "Simulated Intel GPU", True),
-                DeviceInfo("NPU", "npu", "Simulated Intel NPU", True),
-            ]
-            available_devices = ["CPU", "GPU", "NPU"]
-            notes.append(
-                "Development simulation only; results are not hardware measurements."
+            platform_id = config.get("mock_platform", "dgx_spark")
+            platform_spec = (config.get("platforms", {}) or {}).get(
+                platform_id, {}
             )
+            accelerator = {
+                "detected": True,
+                "source": "simulated",
+                "driver_version": None,
+                "device_count": 1,
+                "names": [platform_spec.get("display_name", "Simulated NVIDIA GPU")],
+                "memory_total_gb": 128.0,
+                "compute_capability": platform_spec.get("compute_capability"),
+            }
+            devices = [
+                DeviceInfo(
+                    id="CUDA",
+                    kind="gpu",
+                    name=f"SIMULATED {platform_spec.get('display_name', 'CUDA device')}",
+                    available=True,
+                    properties={
+                        "memory_total_gb": 128.0,
+                        "compute_capability": platform_spec.get(
+                            "compute_capability"
+                        ),
+                        "utilization_percent": None,
+                    },
+                ),
+                DeviceInfo(
+                    id="CPU",
+                    kind="cpu",
+                    name="SIMULATED Grace CPU",
+                    available=True,
+                ),
+            ]
+            available_devices = list(
+                config.get("mock_available_devices", ["CUDA", "CPU"])
+            )
+            memory = dict(memory)
+            memory["total_gb"] = 128.0
+            memory["available_gb"] = 120.0
+            memory["simulated"] = True
+            unified_memory = bool(platform_spec.get("unified_memory", True))
+            bandwidth = platform_spec.get("memory_bandwidth_gbps")
+            engines_view = {
+                engine_id: {**report, "available": True, "simulated": True}
+                for engine_id, report in engine_reports.items()
+            }
+            notes.append(
+                "Development simulation only; every number is modelled, not measured."
+            )
+            notes.append(
+                f"Simulating platform '{platform_id}' with "
+                f"{memory['total_gb']} GB unified memory at "
+                f"{bandwidth} GB/s."
+            )
+            real_ready = False
+            stack = {
+                "cuda": {"nvcc_version": None, "simulated": True},
+                "platform": platform_id,
+                "engines_available": sorted(engines_view),
+            }
         else:
-            available_devices = [device.id for device in devices]
+            accelerator, devices = _detect_cuda()
+            platform_id, platform_spec = self._identify_platform(
+                accelerator, native_machine, config
+            )
+            unified_memory = bool(platform_spec.get("unified_memory", False))
+            bandwidth = platform_spec.get("memory_bandwidth_gbps")
+            if devices:
+                devices = devices + [
+                    DeviceInfo(
+                        id="CPU", kind="cpu", name=cpu_model, available=True
+                    )
+                ]
+                available_devices = [device.id for device in devices]
+            else:
+                devices = [
+                    DeviceInfo(
+                        id="CPU", kind="cpu", name=cpu_model, available=True
+                    )
+                ]
+                available_devices = ["CPU"]
+            engines_view = engine_reports
+            stack = {
+                "cuda": _cuda_toolkit(),
+                "platform": platform_id,
+                "engines_available": sorted(
+                    engine_id
+                    for engine_id, report in engine_reports.items()
+                    if report["available"]
+                ),
+            }
 
-        cpu_is_intel = "intel" in cpu_model.lower()
-        has_ov_device = bool(available_devices)
-        real_ready = (not simulate) and cpu_is_intel and has_ov_device
-        if not cpu_is_intel:
-            notes.append("Intel target hardware was not detected.")
-        if not openvino_info.get("installed"):
-            notes.append("OpenVINO is not installed.")
+            servable = [
+                engine_id
+                for engine_id in stack["engines_available"]
+                if self.engines.servable(engine_id)
+            ]
+            real_ready = bool(accelerator.get("detected")) and bool(servable)
 
-        gpu_devices = [d for d in devices if d.kind == "gpu"]
-        npu_devices = [d for d in devices if d.kind == "npu"]
+            if not accelerator.get("detected"):
+                notes.append(
+                    "No CUDA device detected. Install the driver or run with "
+                    "--mode mock for orchestration development."
+                )
+            if not servable:
+                notes.append(
+                    "No servable inference engine found. Install one of vLLM, "
+                    "TensorRT-LLM, SGLang or NIM before a real benchmark."
+                )
+            if platform_id == "dgx_spark":
+                notes.append(
+                    "DGX Spark detected: capacity is large and bandwidth is "
+                    "narrow, so decode is bandwidth-bound. Sparse models and "
+                    "speculative decoding are ranked accordingly."
+                )
+            elif platform_id == "cuda_discrete":
+                notes.append(
+                    "Discrete CUDA GPU: the memory ceiling is board VRAM, not "
+                    "host RAM."
+                )
+
+        if unified_memory and memory.get("total_gb"):
+            accelerator = dict(accelerator)
+            accelerator["memory_total_gb"] = memory["total_gb"]
+            accelerator["unified"] = True
+
         fingerprint_input = {
             "os": platform.system(),
             "os_release": platform.release(),
             "machine": native_machine,
             "cpu_model": cpu_model,
             "memory_total_gb": memory.get("total_gb"),
-            "devices": [d.name for d in devices],
-            "openvino_version": openvino_info.get("version"),
+            "devices": [device.name for device in devices],
+            "platform_id": stack.get("platform"),
+            "driver": accelerator.get("driver_version"),
+            "engines": stack.get("engines_available"),
             "simulated": simulate,
         }
 
@@ -198,27 +479,21 @@ class HardwareProfiler:
                 "architecture": native_machine,
                 "logical_cores": os.cpu_count(),
                 "workload": _cpu_workload(),
-                "intel": cpu_is_intel,
             },
-            gpu={
-                "available": bool(gpu_devices),
-                "devices": [d.to_dict() for d in gpu_devices],
-                "workload": {"usage_percent": None, "status": "unsupported"},
-            },
-            npu={
-                "available": bool(npu_devices),
-                "devices": [d.to_dict() for d in npu_devices],
-                "workload": {"usage_percent": None, "status": "unsupported"},
-            },
+            accelerator=accelerator,
             memory=memory,
             disk={
                 "total_gb": round(disk_usage.total / (1024**3), 2),
                 "free_gb": round(disk_usage.free / (1024**3), 2),
             },
-            openvino=openvino_info,
+            stack=stack,
+            engines=engines_view,
             available_devices=available_devices,
             devices=devices,
             fingerprint=stable_hash(fingerprint_input),
+            platform_id=stack.get("platform", "unknown"),
+            unified_memory=unified_memory,
+            memory_bandwidth_gbps=bandwidth,
             simulated=simulate,
             real_execution_ready=real_ready,
             notes=notes,

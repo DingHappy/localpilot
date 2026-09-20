@@ -4,15 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "localpilot"
-version = "0.1.0"
-description = "AI compute autopilot for local model planning, validation, benchmarking, and optimization"
+version = "0.2.0"
+description = "AI compute autopilot: picks, measures and remembers a local inference configuration on NVIDIA hardware"
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
 license = { text = "Apache-2.0" }
 authors = [
   { name = "LocalPilot contributors" }
 ]
-keywords = ["local-ai", "openvino", "intel", "benchmark", "autopilot"]
+keywords = ["local-ai", "nvidia", "dgx-spark", "cuda", "vllm", "tensorrt-llm",
+            "nvfp4", "benchmark", "autopilot", "agent-skills"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Programming Language :: Python :: 3",
@@ -24,10 +25,10 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-intel = [
-  "openvino>=2025.2,<2027",
-  "openvino-genai>=2025.2,<2027",
-  "huggingface-hub>=0.29,<2",
+# The core package is standard library only, so planning, sizing and the
+# simulation run anywhere. Everything below is additive.
+nvidia = [
+  "nvidia-ml-py>=12.560,<14",
   "psutil>=5.9,<8",
 ]
 api = [
@@ -36,22 +37,29 @@ api = [
 ]
 dev = [
   "pytest>=8,<10",
+  "httpx>=0.27,<1",
 ]
 all = [
-  "openvino>=2025.2,<2027",
-  "openvino-genai>=2025.2,<2027",
-  "huggingface-hub>=0.29,<2",
+  "nvidia-ml-py>=12.560,<14",
   "psutil>=5.9,<8",
   "fastapi>=0.115,<1",
   "uvicorn>=0.30,<1",
   "pytest>=8,<10",
+  "httpx>=0.27,<1",
 ]
+
+# Inference engines are deliberately absent. Each one is a large,
+# platform-specific install with its own CUDA requirements, and LocalPilot
+# talks to whichever is already present over HTTP rather than pinning one.
 
 [project.scripts]
 localpilot = "localpilot.cli:main"
 
 [tool.setuptools.packages.find]
 include = ["localpilot*"]
+
+[tool.setuptools.package-data]
+localpilot = ["web/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

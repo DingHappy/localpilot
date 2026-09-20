@@ -1,17 +1,35 @@
 from __future__ import annotations
 
 import os
-from typing import List
+from typing import Any, Dict, List, Optional, Tuple
 
-from localpilot.models.selector import ModelSelector
+from localpilot.engines.registry import EngineRegistry, EngineSpec
+from localpilot.models.selector import ModelSelector, SelectionOutcome
+from localpilot.sizing import MemoryModel, decode_roofline_tokens_s
 from localpilot.planner.policies import PolicyEngine
 from localpilot.schemas import CandidatePlan, HardwareProfile, Intent, ModelSpec
 
 
 class Planner:
-    def __init__(self, policies: PolicyEngine = None) -> None:
+    """Builds the candidate set for one intent.
+
+    The search space on a unified-memory machine is not "which device" --
+    there is one accelerator. It is the serving configuration: engine,
+    weight precision, KV precision, context, batch width, and whether to
+    spend spare compute on speculative decoding.
+    """
+
+    def __init__(
+        self,
+        policies: PolicyEngine = None,
+        engines: EngineRegistry = None,
+        memory_model: MemoryModel = None,
+    ) -> None:
         self.policies = policies or PolicyEngine()
-        self.selector = ModelSelector()
+        self.engines = engines or EngineRegistry()
+        self.memory = memory_model or MemoryModel(self.policies.memory_config)
+        self.selector = ModelSelector(self.memory)
+        self.last_selection: Optional[SelectionOutcome] = None
 
     def plan(
         self,
@@ -20,66 +38,315 @@ class Planner:
         models: List[ModelSpec],
         runtime: str,
     ) -> List[CandidatePlan]:
-        selected_models = self.selector.select(intent, hardware, models)
-        if not selected_models:
-            raise RuntimeError(f"No viable models for task {intent.task}")
+        engine_ids = self._candidate_engines(hardware, runtime)
+        if not engine_ids:
+            raise RuntimeError(
+                "No inference engine is available. Install vLLM, TensorRT-LLM, "
+                "SGLang or NIM, or run with --mode mock."
+            )
+
+        selection = self.selector.select(intent, hardware, models, engine_ids)
+        self.last_selection = selection
+        if not selection.selected:
+            raise RuntimeError(self._no_model_message(intent, selection))
 
         policy = self.policies.priority(intent.priority)
-        preferred_devices = policy.get("prefer_device", ["GPU", "NPU", "CPU"])
-        available = {item.split(".", 1)[0] for item in hardware.available_devices}
-        usable_memory = hardware.memory.get("total_gb")
-        if usable_memory is not None:
-            usable_memory *= 1 - self.policies.safety_reserve_percent / 100
+        preferred_engines = [
+            engine_id
+            for engine_id in policy.get("prefer_engine", engine_ids)
+            if engine_id in engine_ids
+        ] or engine_ids
 
-        candidates = []
-        for device_rank, device in enumerate(preferred_devices):
-            if device not in available:
-                continue
-            for model in selected_models:
-                if device not in model.supported_devices:
+        candidates: List[Tuple[float, CandidatePlan]] = []
+        for model in selection.selected:
+            for engine_rank, engine_id in enumerate(preferred_engines):
+                if engine_id not in model.engines:
                     continue
-                expected_memory = round(
-                    max(model.disk_size_gb * 1.35, model.parameter_count_b * 0.8),
-                    2,
-                )
-                if usable_memory is not None and expected_memory > usable_memory:
+                try:
+                    engine = self.engines.get(engine_id)
+                except KeyError:
                     continue
-                variant = model.variants.get(device, {})
-                precision = variant.get("precision", model.precision)
-                confidence = max(
-                    0.50,
-                    0.92 - device_rank * 0.08 - (0.05 if not hardware.simulated else 0),
-                )
-                reason = (
-                    f"{device} ranks #{device_rank + 1} for {intent.priority}; "
-                    f"{model.model_id} fits the memory and context gates"
-                )
-                candidates.append(
-                    CandidatePlan(
-                        candidate_id=f"{model.model_id}-{device.lower()}-{precision.lower()}",
-                        model_id=model.model_id,
-                        source_id=model.source_id,
-                        device=device,
-                        precision=precision,
-                        context_length=min(intent.context_length, model.context_length),
+                for knobs in self._knob_combinations(
+                    engine, model, intent, hardware, policy
+                ):
+                    candidate = self._build_candidate(
+                        model=model,
+                        engine=engine,
+                        engine_rank=engine_rank,
+                        intent=intent,
+                        hardware=hardware,
                         runtime=runtime,
-                        expected_memory_gb=expected_memory,
-                        quality_score=model.quality_score,
-                        reason=reason,
-                        confidence=round(confidence, 2),
-                        simulated=hardware.simulated,
-                        model_path=os.environ.get("LOCALPILOT_MODEL_PATH") or None,
+                        knobs=knobs,
                     )
-                )
+                    if candidate is None:
+                        continue
+                    prior = self._candidate_prior(
+                        model, candidate, hardware, intent, engine_rank
+                    )
+                    candidates.append((prior, candidate))
 
         if not candidates:
-            raise RuntimeError("No executable model and device combinations were found")
-
-        if intent.priority == "quality":
-            candidates.sort(
-                key=lambda item: (item.quality_score, item.confidence), reverse=True
+            raise RuntimeError(
+                "Every model and engine combination was gated out before "
+                "execution. Run `localpilot recommend --json` to see why."
             )
-        return candidates[: self.policies.max_candidates]
+
+        candidates.sort(key=lambda item: item[0], reverse=True)
+        return self._diversify(candidates)
+
+    def _diversify(
+        self, ranked: List[Tuple[float, CandidatePlan]]
+    ) -> List[CandidatePlan]:
+        """Spend the candidate budget on distinct models before knob variants.
+
+        Ranking by prior alone fills every slot with one model's near
+        identical configurations, and measuring four of those answers a
+        narrower question than the user asked. Covering distinct models
+        first makes the comparison informative; leftover slots then go to
+        the knob variants of the strongest model.
+        """
+        limit = self.policies.max_candidates
+        per_model = max(1, self.policies.max_candidates_per_model)
+
+        by_model: Dict[str, List[CandidatePlan]] = {}
+        model_order: List[str] = []
+        seen_ids = set()
+        for _, candidate in ranked:
+            if candidate.candidate_id in seen_ids:
+                continue
+            seen_ids.add(candidate.candidate_id)
+            if candidate.model_id not in by_model:
+                by_model[candidate.model_id] = []
+                model_order.append(candidate.model_id)
+            by_model[candidate.model_id].append(candidate)
+
+        selected: List[CandidatePlan] = []
+        for depth in range(per_model):
+            for model_id in model_order:
+                if len(selected) >= limit:
+                    return selected
+                bucket = by_model[model_id]
+                if depth < len(bucket):
+                    selected.append(bucket[depth])
+        return selected[:limit]
+
+    # ------------------------------------------------------------------
+    # candidate construction
+
+    def _candidate_engines(
+        self, hardware: HardwareProfile, runtime: str
+    ) -> List[str]:
+        if runtime == "mock":
+            # Mock mode models every engine so the search space can be
+            # developed and demonstrated without the target machine.
+            return [
+                engine_id
+                for engine_id in self.engines.ids()
+                if self.engines.servable(engine_id)
+            ]
+        installed = [
+            engine_id
+            for engine_id in hardware.stack.get("engines_available", [])
+            if self.engines.servable(engine_id)
+        ]
+        if runtime in installed:
+            return [runtime]
+        return installed
+
+    def _knob_combinations(
+        self,
+        engine: EngineSpec,
+        model: ModelSpec,
+        intent: Intent,
+        hardware: HardwareProfile,
+        policy: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
+        space = self.policies.search_space
+        concurrency = intent.concurrency or int(policy.get("target_concurrency", 1))
+
+        kv_dtypes = ["auto"]
+        if engine.supports_feature("fp8_kv_cache"):
+            kv_dtypes = [
+                dtype
+                for dtype in space.get("kv_cache_dtypes", ["auto"])
+                if dtype == "auto" or engine.supports_feature("fp8_kv_cache")
+            ]
+
+        speculative_options = [False]
+        if (
+            model.supports_speculative_decoding
+            and engine.supports_feature("speculative_decoding")
+            and policy.get("prefer_speculative_decoding", True)
+        ):
+            # Only worth trying when a stream is latency-bound. Under heavy
+            # batching the spare compute it needs is already committed.
+            speculative_options = [True, False] if concurrency <= 4 else [False]
+
+        utilizations = space.get("gpu_memory_utilization", [0.90])
+
+        combinations = []
+        for kv_dtype in kv_dtypes:
+            for speculative in speculative_options:
+                for utilization in utilizations:
+                    combinations.append(
+                        {
+                            "kv_cache_dtype": kv_dtype,
+                            "speculative_decoding": speculative,
+                            "gpu_memory_utilization": utilization,
+                            "max_num_seqs": max(concurrency, 1),
+                            "enable_prefix_caching": bool(
+                                space.get("enable_prefix_caching", True)
+                            )
+                            and engine.supports_feature("prefix_caching"),
+                            "num_speculative_tokens": int(
+                                space.get("speculative_num_tokens", 3)
+                            ),
+                            "concurrency": max(concurrency, 1),
+                        }
+                    )
+        return combinations
+
+    def _build_candidate(
+        self,
+        model: ModelSpec,
+        engine: EngineSpec,
+        engine_rank: int,
+        intent: Intent,
+        hardware: HardwareProfile,
+        runtime: str,
+        knobs: Dict[str, Any],
+    ) -> Optional[CandidatePlan]:
+        context_length = min(intent.context_length, model.context_length)
+        concurrency = int(knobs["concurrency"])
+        speculative = bool(knobs["speculative_decoding"])
+
+        estimate = self.memory.estimate(
+            model,
+            hardware,
+            context_length=context_length,
+            concurrency=concurrency,
+            kv_cache_dtype=knobs["kv_cache_dtype"],
+            speculative_decoding=speculative,
+        )
+        if not estimate.fits:
+            return None
+
+        parts = [model.model_id, engine.engine_id, model.precision.lower()]
+        if knobs["kv_cache_dtype"] != "auto":
+            parts.append(f"kv{knobs['kv_cache_dtype']}")
+        if speculative:
+            parts.append("spec")
+        if concurrency > 1:
+            parts.append(f"b{concurrency}")
+        candidate_id = "-".join(parts)
+
+        reason_bits = [
+            f"{engine.display_name} ranks #{engine_rank + 1} for "
+            f"{intent.priority}"
+        ]
+        if model.is_mixture_of_experts:
+            reason_bits.append(
+                f"{model.active_parameter_count_b:g}B of "
+                f"{model.parameter_count_b:g}B parameters are read per token"
+            )
+        if speculative:
+            reason_bits.append("speculative decoding trades compute for bandwidth")
+        if knobs["kv_cache_dtype"] == "fp8":
+            reason_bits.append("FP8 KV cache halves cache cost")
+        reason_bits.append(estimate.detail)
+
+        runtime_config = {
+            "max_num_seqs": knobs["max_num_seqs"],
+            "gpu_memory_utilization": knobs["gpu_memory_utilization"],
+            "kv_cache_dtype": knobs["kv_cache_dtype"],
+            "enable_prefix_caching": knobs["enable_prefix_caching"],
+        }
+        if speculative:
+            runtime_config["speculative"] = {
+                "draft_source_id": model.draft_source_id,
+                "num_speculative_tokens": knobs["num_speculative_tokens"],
+            }
+
+        confidence = max(
+            0.45,
+            0.90
+            - engine_rank * 0.07
+            - (0.08 if speculative else 0.0)
+            - (0.05 if model.validation != "verified_on_target" else 0.0),
+        )
+
+        return CandidatePlan(
+            candidate_id=candidate_id,
+            model_id=model.model_id,
+            source_id=model.source_id,
+            engine=engine.engine_id,
+            device="CUDA" if "CUDA" in model.devices else "CPU",
+            precision=model.precision,
+            context_length=context_length,
+            runtime=runtime,
+            expected_memory_gb=estimate.total_gb,
+            quality_score=model.quality_score,
+            reason="; ".join(reason_bits),
+            confidence=round(confidence, 2),
+            simulated=hardware.simulated,
+            concurrency=concurrency,
+            kv_cache_dtype=knobs["kv_cache_dtype"],
+            active_parameter_count_b=model.active_parameter_count_b,
+            parameter_count_b=model.parameter_count_b,
+            memory_estimate=estimate,
+            model_path=os.environ.get("LOCALPILOT_MODEL_PATH") or None,
+            runtime_config=runtime_config,
+            knobs=dict(knobs),
+        )
+
+    def _candidate_prior(
+        self,
+        model: ModelSpec,
+        candidate: CandidatePlan,
+        hardware: HardwareProfile,
+        intent: Intent,
+        engine_rank: int,
+    ) -> float:
+        roofline = decode_roofline_tokens_s(
+            model.active_parameter_count_b,
+            model.precision,
+            hardware.memory_bandwidth_gbps,
+            efficiency=self.policies.bandwidth_efficiency,
+            memory_model=self.memory,
+        )
+        speed = roofline or 40.0
+        if candidate.runtime_config.get("speculative"):
+            speed *= self.policies.speculative_gain
+        speed_term = min(1.0, speed / 200.0)
+        engine_term = max(0.0, 1.0 - engine_rank * 0.12)
+        weights = self.policies.priority(intent.priority).get("weights", {})
+        quality_weight = float(weights.get("quality", 0.25))
+        speed_weight = float(weights.get("latency", 0.2)) + float(
+            weights.get("throughput", 0.2)
+        )
+        return (
+            model.quality_score * quality_weight
+            + speed_term * speed_weight
+            + engine_term * 0.15
+            + candidate.confidence * 0.10
+        )
+
+    def _no_model_message(
+        self, intent: Intent, selection: SelectionOutcome
+    ) -> str:
+        if not selection.rejected:
+            return f"No model in the registry serves task '{intent.task}'"
+        lines = [
+            f"No model can serve task '{intent.task}' on this machine:",
+        ]
+        for rejection in selection.rejected[:6]:
+            lines.append(
+                f"  - {rejection.model_id} [{rejection.gate}] {rejection.reason}"
+            )
+        return "\n".join(lines)
+
+    # ------------------------------------------------------------------
+    # bounded recovery
 
     def recovery_plan(
         self,
@@ -90,93 +357,138 @@ class Planner:
         if not failed_candidates:
             return []
 
-        recovery_policy = self.policies.recovery
-        maximum = max(0, int(recovery_policy.get("max_attempts", 2)))
+        recovery = self.policies.recovery
+        maximum = max(0, int(recovery.get("max_attempts", 2)))
         minimum_context = max(
-            512, int(recovery_policy.get("minimum_context_length", 2048))
+            1024, int(recovery.get("minimum_context_length", 4096))
         )
-        fallback_device = str(
-            recovery_policy.get("fallback_device", "CPU")
-        ).upper()
         primary = failed_candidates[0]
         model = next(
-            (item for item in models if item.model_id == primary.model_id),
-            None,
+            (item for item in models if item.model_id == primary.model_id), None
         )
         if model is None:
             return []
 
-        available = {
-            item.split(".", 1)[0] for item in hardware.available_devices
-        }
-        reduced_context = max(minimum_context, primary.context_length // 2)
-        candidates = []
         seen = {item.candidate_id for item in failed_candidates}
+        attempts: List[CandidatePlan] = []
 
+        # Step one: the same configuration, smaller. Most first failures on a
+        # shared memory pool are the cache, not the weights.
+        reduced_context = max(minimum_context, primary.context_length // 4)
         if reduced_context < primary.context_length:
-            candidate_id = f"{primary.candidate_id}-context-{reduced_context}"
-            if candidate_id not in seen:
-                candidates.append(
-                    CandidatePlan(
-                        candidate_id=candidate_id,
-                        model_id=primary.model_id,
-                        source_id=primary.source_id,
-                        device=primary.device,
-                        precision=primary.precision,
-                        context_length=reduced_context,
-                        runtime=primary.runtime,
-                        expected_memory_gb=round(
-                            primary.expected_memory_gb * 0.85, 2
-                        ),
-                        quality_score=primary.quality_score,
-                        reason=(
-                            f"Recovery after {primary.candidate_id}: reduce "
-                            f"context to {reduced_context}"
-                        ),
-                        confidence=max(0.40, primary.confidence - 0.10),
-                        simulated=primary.simulated,
-                        model_path=primary.model_path,
-                        runtime_config=dict(primary.runtime_config),
-                        fallback_of=primary.candidate_id,
-                        recovery_action="reduce_context",
-                    )
-                )
-
-        if (
-            fallback_device in available
-            and fallback_device in model.supported_devices
-            and fallback_device != primary.device
-        ):
-            variant = model.variants.get(fallback_device, {})
-            precision = variant.get("precision", model.precision)
-            candidate_id = (
-                f"{model.model_id}-{fallback_device.lower()}-"
-                f"{precision.lower()}-recovery"
+            estimate = self.memory.estimate(
+                model,
+                hardware,
+                context_length=reduced_context,
+                concurrency=1,
+                kv_cache_dtype="fp8",
             )
+            candidate_id = f"{primary.candidate_id}-ctx{reduced_context}"
             if candidate_id not in seen:
-                candidates.append(
-                    CandidatePlan(
+                attempts.append(
+                    self._recovery_candidate(
+                        primary,
+                        model,
                         candidate_id=candidate_id,
-                        model_id=model.model_id,
-                        source_id=model.source_id,
-                        device=fallback_device,
-                        precision=precision,
                         context_length=reduced_context,
-                        runtime=primary.runtime,
-                        expected_memory_gb=round(
-                            primary.expected_memory_gb * 0.90, 2
-                        ),
-                        quality_score=model.quality_score,
+                        concurrency=1,
+                        kv_cache_dtype="fp8",
+                        estimate=estimate,
+                        action="reduce_context_and_quantize_kv",
                         reason=(
-                            f"Recovery after {primary.candidate_id}: switch to "
-                            f"{fallback_device} with context {reduced_context}"
+                            f"Recovery after {primary.candidate_id}: context "
+                            f"{primary.context_length} to {reduced_context} "
+                            "with an FP8 KV cache"
                         ),
-                        confidence=max(0.35, primary.confidence - 0.18),
-                        simulated=primary.simulated,
-                        model_path=primary.model_path,
-                        fallback_of=primary.candidate_id,
-                        recovery_action="fallback_device_and_context",
+                        engine=primary.engine,
                     )
                 )
 
-        return candidates[:maximum]
+        # Step two: the smallest viable model on the fallback engine.
+        fallback_engine = str(recovery.get("fallback_engine", "vllm"))
+        smallest = min(
+            (
+                item
+                for item in models
+                if fallback_engine in item.engines and item.model_id != model.model_id
+            ),
+            key=lambda item: self.memory.weights_gb(item),
+            default=None,
+        )
+        if smallest is not None:
+            estimate = self.memory.estimate(
+                smallest,
+                hardware,
+                context_length=minimum_context,
+                concurrency=1,
+            )
+            candidate_id = f"{smallest.model_id}-{fallback_engine}-recovery"
+            if estimate.fits and candidate_id not in seen:
+                attempts.append(
+                    self._recovery_candidate(
+                        primary,
+                        smallest,
+                        candidate_id=candidate_id,
+                        context_length=minimum_context,
+                        concurrency=1,
+                        kv_cache_dtype="auto",
+                        estimate=estimate,
+                        action="fallback_to_smallest_model",
+                        reason=(
+                            f"Recovery after {primary.candidate_id}: smallest "
+                            f"registered model on {fallback_engine}"
+                        ),
+                        engine=fallback_engine,
+                    )
+                )
+
+        return attempts[:maximum]
+
+    def _recovery_candidate(
+        self,
+        primary: CandidatePlan,
+        model: ModelSpec,
+        candidate_id: str,
+        context_length: int,
+        concurrency: int,
+        kv_cache_dtype: str,
+        estimate,
+        action: str,
+        reason: str,
+        engine: str,
+    ) -> CandidatePlan:
+        return CandidatePlan(
+            candidate_id=candidate_id,
+            model_id=model.model_id,
+            source_id=model.source_id,
+            engine=engine,
+            device=primary.device,
+            precision=model.precision,
+            context_length=context_length,
+            runtime=primary.runtime,
+            expected_memory_gb=estimate.total_gb,
+            quality_score=model.quality_score,
+            reason=reason,
+            confidence=max(0.35, primary.confidence - 0.15),
+            simulated=primary.simulated,
+            concurrency=concurrency,
+            kv_cache_dtype=kv_cache_dtype,
+            active_parameter_count_b=model.active_parameter_count_b,
+            parameter_count_b=model.parameter_count_b,
+            memory_estimate=estimate,
+            model_path=primary.model_path,
+            runtime_config={
+                "max_num_seqs": concurrency,
+                "gpu_memory_utilization": 0.85,
+                "kv_cache_dtype": kv_cache_dtype,
+                "enable_prefix_caching": False,
+            },
+            knobs={
+                "kv_cache_dtype": kv_cache_dtype,
+                "speculative_decoding": False,
+                "concurrency": concurrency,
+                "max_num_seqs": concurrency,
+            },
+            fallback_of=primary.candidate_id,
+            recovery_action=action,
+        )

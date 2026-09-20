@@ -1,11 +1,22 @@
 from .base import RuntimeProvider, RuntimeUnavailable
 from .mock import MockRuntime
-from .openvino import OpenVINORuntime
+from .openai_compat import (
+    LlamaCppRuntime,
+    NIMRuntime,
+    OpenAICompatRuntime,
+    SGLangRuntime,
+    TRTLLMRuntime,
+    VLLMRuntime,
+)
 
 __all__ = [
     "RuntimeProvider",
     "RuntimeUnavailable",
     "MockRuntime",
-    "OpenVINORuntime",
+    "OpenAICompatRuntime",
+    "VLLMRuntime",
+    "TRTLLMRuntime",
+    "SGLangRuntime",
+    "NIMRuntime",
+    "LlamaCppRuntime",
 ]
-

@@ -61,10 +61,87 @@ class ProfileStore:
             return None
         return max(matches, key=lambda item: item.last_verified_at)
 
+    def list_profiles(self) -> list:
+        """Saved profiles, newest verification first."""
+        profiles = []
+        for path in self.root.glob("profile-*.json"):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            candidate = data.get("candidate", {})
+            benchmark = data.get("benchmark", {})
+            profiles.append(
+                {
+                    "profile_key": data.get("profile_key"),
+                    "task": data.get("task"),
+                    "priority": data.get("priority"),
+                    "platform_id": data.get("platform_id"),
+                    "candidate_id": candidate.get("candidate_id"),
+                    "model_id": candidate.get("model_id"),
+                    "engine": candidate.get("engine"),
+                    "precision": candidate.get("precision"),
+                    "context_length": candidate.get("context_length"),
+                    "concurrency": candidate.get("concurrency"),
+                    "score": data.get("score"),
+                    "simulated": data.get("simulated"),
+                    "ttft_ms": benchmark.get("ttft_ms"),
+                    "throughput_tokens_s": benchmark.get("throughput_tokens_s"),
+                    "peak_memory_gb": benchmark.get("peak_memory_gb"),
+                    "created_at": data.get("created_at"),
+                    "last_verified_at": data.get("last_verified_at"),
+                }
+            )
+        profiles.sort(key=lambda item: item.get("last_verified_at") or "", reverse=True)
+        return profiles
+
     def save_run(self, run_id: str, data: Dict[str, Any]) -> Path:
         path = self.root / "runs" / f"{run_id}.json"
         atomic_write_json(path, data)
         return path
+
+    def load_run(self, run_id: str) -> Optional[Dict[str, Any]]:
+        path = self.root / "runs" / f"{run_id}.json"
+        if not path.exists():
+            return None
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return None
+
+    def list_runs(self, limit: int = 20) -> list:
+        runs_dir = self.root / "runs"
+        if not runs_dir.is_dir():
+            return []
+        paths = sorted(
+            runs_dir.glob("*.json"),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+        summaries = []
+        for path in paths[:limit]:
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            best = data.get("best_profile") or {}
+            summaries.append(
+                {
+                    "run_id": data.get("run_id"),
+                    "task": (data.get("intent") or {}).get("task"),
+                    "priority": (data.get("intent") or {}).get("priority"),
+                    "goal": (data.get("intent") or {}).get("raw_text", "")[:160],
+                    "status": data.get("status"),
+                    "profile_reused": data.get("profile_reused"),
+                    "simulated": (data.get("hardware") or {}).get("simulated"),
+                    "candidates": len(data.get("candidates") or []),
+                    "winner": (best.get("candidate") or {}).get("candidate_id"),
+                    "score": best.get("score"),
+                    "started_at": data.get("started_at"),
+                    "finished_at": data.get("finished_at"),
+                }
+            )
+        return summaries
 
     def current(self) -> Dict[str, Any]:
         path = self.root / "current.json"

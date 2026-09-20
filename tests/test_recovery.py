@@ -1,95 +1,37 @@
-import unittest
 import tempfile
+import unittest
 from pathlib import Path
 
-from localpilot.hardware.profiler import HardwareProfiler
-from localpilot.models.registry import ModelRegistry
 from localpilot.orchestrator import Orchestrator
-from localpilot.planner.planner import Planner
 from localpilot.profiles.store import ProfileStore
 from localpilot.runtime.mock import MockRuntime
-from localpilot.schemas import CandidatePlan
 
 
-class RecoveryPlannerTests(unittest.TestCase):
-    def test_recovery_reduces_context_then_adds_cpu(self):
-        hardware = HardwareProfiler().profile(simulate=True)
-        model = ModelRegistry().get(
-            "qwen2.5-coder-1.5b-instruct-int4-ov"
-        )
-        failed = CandidatePlan(
-            candidate_id="failed-gpu",
-            model_id=model.model_id,
-            source_id=model.source_id,
-            device="GPU",
-            precision="INT4_ASYM",
-            context_length=8192,
-            runtime="mock",
-            expected_memory_gb=2,
-            quality_score=model.quality_score,
-            reason="test",
-            confidence=0.9,
-            simulated=True,
-        )
+class FailLargeContextRuntime(MockRuntime):
+    """Refuses anything above a small context, as a cache allocation would."""
 
-        recovery = Planner().recovery_plan([failed], hardware, [model])
-
-        self.assertEqual(len(recovery), 2)
-        self.assertEqual(recovery[0].device, "GPU")
-        self.assertEqual(recovery[0].context_length, 4096)
-        self.assertEqual(recovery[0].recovery_action, "reduce_context")
-        self.assertEqual(recovery[1].device, "CPU")
-        self.assertEqual(
-            recovery[1].recovery_action,
-            "fallback_device_and_context",
-        )
-        self.assertTrue(
-            all(item.fallback_of == "failed-gpu" for item in recovery)
-        )
-
-    def test_recovery_attempts_are_bounded(self):
-        hardware = HardwareProfiler().profile(simulate=True)
-        model = ModelRegistry().get(
-            "qwen2.5-coder-1.5b-instruct-int4-ov"
-        )
-        failed = CandidatePlan(
-            candidate_id="failed-gpu",
-            model_id=model.model_id,
-            source_id=model.source_id,
-            device="GPU",
-            precision="INT4_ASYM",
-            context_length=8192,
-            runtime="mock",
-            expected_memory_gb=2,
-            quality_score=model.quality_score,
-            reason="test",
-            confidence=0.9,
-            simulated=True,
-        )
-        recovery = Planner().recovery_plan([failed], hardware, [model])
-        self.assertLessEqual(len(recovery), 2)
+    def load_model(self, plan):
+        if plan.context_length > 8192:
+            raise RuntimeError("injected KV cache allocation failure")
+        super().load_model(plan)
 
 
-class RecoverAfterContextFailureRuntime(MockRuntime):
-    def load_model(self, selected):
-        if selected.context_length > 4096:
-            raise RuntimeError("injected context allocation failure")
-        super().load_model(selected)
+class FailEverythingRuntime(MockRuntime):
+    def load_model(self, plan):
+        raise RuntimeError("injected unconditional failure")
 
 
-class RecoveryOrchestratorTests(unittest.TestCase):
-    def test_orchestrator_executes_recovery_after_all_primary_fail(self):
+class RecoveryTests(unittest.TestCase):
+    def test_recovery_runs_after_every_primary_candidate_fails(self):
         def resolver(name):
-            self.assertEqual(name, "mock")
-            return RecoverAfterContextFailureRuntime
+            return FailLargeContextRuntime
 
         with tempfile.TemporaryDirectory() as directory:
             orchestrator = Orchestrator(
-                store=ProfileStore(Path(directory)),
-                runtime_resolver=resolver,
+                store=ProfileStore(Path(directory)), runtime_resolver=resolver
             )
             result = orchestrator.autopilot(
-                "Completely local coding assistant, latency first",
+                "本地长上下文代码助手，128k 上下文",
                 mode="mock",
                 reuse_profile=False,
             )
@@ -98,10 +40,51 @@ class RecoveryOrchestratorTests(unittest.TestCase):
         self.assertTrue(
             any(item.candidate.fallback_of for item in result.candidates)
         )
-        self.assertTrue(
-            any("bounded recovery" in warning for warning in result.warnings)
-        )
-        self.assertLessEqual(result.best_profile.candidate.context_length, 4096)
+        recovery_steps = [
+            step for step in result.agent_trace if step.action == "recovery_started"
+        ]
+        self.assertTrue(recovery_steps)
+        self.assertEqual(recovery_steps[0].status, "degraded")
+        self.assertLessEqual(result.best_profile.candidate.context_length, 8192)
+
+    def test_recovery_is_bounded_and_then_gives_up(self):
+        """Failure has to terminate. An unbounded retry loop on a machine
+        that cannot serve the model is worse than a clear error."""
+
+        def resolver(name):
+            return FailEverythingRuntime
+
+        with tempfile.TemporaryDirectory() as directory:
+            orchestrator = Orchestrator(
+                store=ProfileStore(Path(directory)), runtime_resolver=resolver
+            )
+            with self.assertRaises(RuntimeError) as caught:
+                orchestrator.autopilot(
+                    "本地代码审查 AI，速度优先", mode="mock", reuse_profile=False
+                )
+        self.assertIn("injected unconditional failure", str(caught.exception))
+
+    def test_a_stale_profile_is_rejected_and_the_search_reruns(self):
+        """A remembered configuration that no longer starts must not be served."""
+        state = {"fail": False}
+
+        class SometimesRuntime(MockRuntime):
+            def load_model(self, plan):
+                if state["fail"]:
+                    raise RuntimeError("injected post-hoc failure")
+                super().load_model(plan)
+
+        with tempfile.TemporaryDirectory() as directory:
+            store = ProfileStore(Path(directory))
+            orchestrator = Orchestrator(
+                store=store, runtime_resolver=lambda name: SometimesRuntime
+            )
+            first = orchestrator.autopilot("本地代码审查，速度优先", mode="mock")
+            self.assertFalse(first.profile_reused)
+
+            state["fail"] = True
+            with self.assertRaises(RuntimeError):
+                orchestrator.autopilot("本地代码审查，速度优先", mode="mock")
 
 
 if __name__ == "__main__":

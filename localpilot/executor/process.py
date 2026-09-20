@@ -1,16 +1,36 @@
 from __future__ import annotations
 
-from typing import Callable
+from typing import Callable, Dict
 
 from localpilot.runtime.base import RuntimeProvider
 from localpilot.runtime.mock import MockRuntime
-from localpilot.runtime.openvino import OpenVINORuntime
+from localpilot.runtime.openai_compat import (
+    LlamaCppRuntime,
+    NIMRuntime,
+    SGLangRuntime,
+    TRTLLMRuntime,
+    VLLMRuntime,
+)
+
+RUNTIMES: Dict[str, Callable[[], RuntimeProvider]] = {
+    "mock": MockRuntime,
+    "vllm": VLLMRuntime,
+    "trtllm": TRTLLMRuntime,
+    "sglang": SGLangRuntime,
+    "nim": NIMRuntime,
+    "llamacpp": LlamaCppRuntime,
+}
 
 
 def runtime_factory(name: str) -> Callable[[], RuntimeProvider]:
-    if name == "mock":
-        return MockRuntime
-    if name == "openvino":
-        return OpenVINORuntime
-    raise ValueError(f"Unsupported runtime: {name}")
+    try:
+        return RUNTIMES[name]
+    except KeyError:
+        raise ValueError(
+            f"Unsupported runtime: {name}. Known runtimes: "
+            f"{', '.join(sorted(RUNTIMES))}"
+        ) from None
 
+
+def runtime_names() -> list:
+    return sorted(RUNTIMES)

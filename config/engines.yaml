@@ -1,0 +1,195 @@
+{
+  "_note": "Every engine here is driven through its OpenAI-compatible HTTP surface. That is what lets one benchmark harness measure time-to-first-token and inter-token latency identically across engines, so a comparison between them means something.",
+
+  "engines": [
+    {
+      "engine_id": "vllm",
+      "display_name": "vLLM",
+      "kind": "server",
+      "probe": {"python_module": "vllm", "binary": "vllm"},
+      "openai_base_path": "/v1",
+      "health_path": "/health",
+      "launch": {
+        "command": ["vllm", "serve", "{source_id}"],
+        "arguments": {
+          "--max-model-len": "{context_length}",
+          "--max-num-seqs": "{max_num_seqs}",
+          "--gpu-memory-utilization": "{gpu_memory_utilization}",
+          "--kv-cache-dtype": "{kv_cache_dtype}",
+          "--port": "{port}"
+        },
+        "flags": {
+          "prefix_caching": "--enable-prefix-caching",
+          "eager": "--enforce-eager"
+        },
+        "speculative": {
+          "--speculative-config": "{\"model\": \"{draft_source_id}\", \"num_speculative_tokens\": {num_speculative_tokens}}"
+        }
+      },
+      "knobs": [
+        "context_length",
+        "max_num_seqs",
+        "gpu_memory_utilization",
+        "kv_cache_dtype",
+        "prefix_caching",
+        "speculative_decoding"
+      ],
+      "supports": {
+        "nvfp4": true,
+        "fp8": true,
+        "fp8_kv_cache": true,
+        "prefix_caching": true,
+        "speculative_decoding": true,
+        "unified_memory": true
+      },
+      "notes": "The default. Broadest model coverage and the only engine here that loads every checkpoint in the registry without a conversion step."
+    },
+    {
+      "engine_id": "trtllm",
+      "display_name": "TensorRT-LLM",
+      "kind": "server",
+      "probe": {"python_module": "tensorrt_llm", "binary": "trtllm-serve"},
+      "openai_base_path": "/v1",
+      "health_path": "/health",
+      "launch": {
+        "command": ["trtllm-serve", "{source_id}"],
+        "arguments": {
+          "--max_seq_len": "{context_length}",
+          "--max_batch_size": "{max_num_seqs}",
+          "--kv_cache_free_gpu_memory_fraction": "{gpu_memory_utilization}",
+          "--port": "{port}"
+        },
+        "flags": {},
+        "speculative": {
+          "--speculative_model_dir": "{draft_source_id}"
+        }
+      },
+      "knobs": [
+        "context_length",
+        "max_num_seqs",
+        "gpu_memory_utilization",
+        "speculative_decoding"
+      ],
+      "supports": {
+        "nvfp4": true,
+        "fp8": true,
+        "fp8_kv_cache": true,
+        "prefix_caching": true,
+        "speculative_decoding": true,
+        "unified_memory": true
+      },
+      "notes": "Usually the fastest once its engine is built, but the build itself is slow and per-configuration. Candidates that change only a runtime knob are cheap on vLLM and expensive here, which the planner accounts for."
+    },
+    {
+      "engine_id": "sglang",
+      "display_name": "SGLang",
+      "kind": "server",
+      "probe": {"python_module": "sglang", "binary": "sglang"},
+      "openai_base_path": "/v1",
+      "health_path": "/health",
+      "launch": {
+        "command": ["python", "-m", "sglang.launch_server", "--model-path", "{source_id}"],
+        "arguments": {
+          "--context-length": "{context_length}",
+          "--max-running-requests": "{max_num_seqs}",
+          "--mem-fraction-static": "{gpu_memory_utilization}",
+          "--port": "{port}"
+        },
+        "flags": {},
+        "speculative": {
+          "--speculative-algorithm": "EAGLE",
+          "--speculative-draft-model-path": "{draft_source_id}"
+        }
+      },
+      "knobs": [
+        "context_length",
+        "max_num_seqs",
+        "gpu_memory_utilization",
+        "speculative_decoding"
+      ],
+      "supports": {
+        "nvfp4": true,
+        "fp8": true,
+        "fp8_kv_cache": true,
+        "prefix_caching": true,
+        "speculative_decoding": true,
+        "unified_memory": true
+      },
+      "notes": "Strong on structured output and prefix reuse."
+    },
+    {
+      "engine_id": "nim",
+      "display_name": "NVIDIA NIM",
+      "kind": "container",
+      "probe": {"binary": "docker", "docker_image_prefix": "nvcr.io/nim/"},
+      "openai_base_path": "/v1",
+      "health_path": "/v1/health/ready",
+      "launch": {
+        "command": ["docker", "run", "--rm", "--gpus", "all"],
+        "arguments": {
+          "--publish": "{port}:8000"
+        },
+        "flags": {},
+        "speculative": {}
+      },
+      "knobs": ["context_length", "max_num_seqs"],
+      "supports": {
+        "nvfp4": true,
+        "fp8": true,
+        "fp8_kv_cache": false,
+        "prefix_caching": true,
+        "speculative_decoding": false,
+        "unified_memory": true
+      },
+      "notes": "Fewest knobs by design: NVIDIA has already picked a profile per GPU. Worth measuring precisely because it is the baseline a tuned configuration has to beat to justify itself."
+    },
+    {
+      "engine_id": "llamacpp",
+      "display_name": "llama.cpp",
+      "kind": "server",
+      "probe": {"binary": "llama-server"},
+      "openai_base_path": "/v1",
+      "health_path": "/health",
+      "launch": {
+        "command": ["llama-server", "--model", "{model_path}"],
+        "arguments": {
+          "--ctx-size": "{context_length}",
+          "--parallel": "{max_num_seqs}",
+          "--n-gpu-layers": "999",
+          "--port": "{port}"
+        },
+        "flags": {},
+        "speculative": {}
+      },
+      "knobs": ["context_length", "max_num_seqs"],
+      "supports": {
+        "nvfp4": false,
+        "fp8": false,
+        "fp8_kv_cache": false,
+        "prefix_caching": true,
+        "speculative_decoding": true,
+        "unified_memory": true
+      },
+      "notes": "GGUF only, so it cannot serve the NVFP4 checkpoints that this platform is built around. Kept as the CPU-capable fallback."
+    },
+    {
+      "engine_id": "transformers",
+      "display_name": "Transformers",
+      "kind": "library",
+      "probe": {"python_module": "transformers"},
+      "openai_base_path": null,
+      "health_path": null,
+      "launch": {"command": [], "arguments": {}, "flags": {}, "speculative": {}},
+      "knobs": ["context_length"],
+      "supports": {
+        "nvfp4": false,
+        "fp8": true,
+        "fp8_kv_cache": false,
+        "prefix_caching": false,
+        "speculative_decoding": true,
+        "unified_memory": true
+      },
+      "notes": "Reference path for modalities no server engine covers yet, such as end-to-end speech. Never a throughput candidate."
+    }
+  ]
+}
