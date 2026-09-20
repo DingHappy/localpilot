@@ -1,3 +1,17 @@
+# docs/
+
+| File | What it is |
+|---|---|
+| `essay.md` | The 十日谈 competition essay: outline, narrative spine, and the slots that need real hardware data. |
+| `devlog.md` | The raw daily journal it draws on, appended each evening. |
+| `architecture-*.svg` | The three figures. |
+
+`scripts/devlog.py` harvests a day's facts — commits, runs, exported reports,
+failures — into a paste-ready block, because a development journal cannot be
+reconstructed on the last day.
+
+---
+
 # Figures
 
 Three hand-authored SVGs. They are committed as sources rather than exported

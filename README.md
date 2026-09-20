@@ -200,6 +200,8 @@ localpilot/
   api/           dashboard, jobs, OpenAI-compatible endpoints
   web/           the dashboard, no external assets
 docs/
+  essay.md                   the competition write-up: outline and data slots
+  devlog.md                  the daily journal it draws on
   architecture-loop.svg      the loop, and the path that skips it
   architecture-platform.svg  why capacity and speed come apart here
   architecture-skill.svg     where this skill sits in the ecosystem
