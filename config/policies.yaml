@@ -77,7 +77,8 @@
   },
 
   "memory": {
-    "safety_reserve_percent": 20,
+    "_note": "safety_reserve_percent and search_space.gpu_memory_utilization describe the same boundary from two sides and must agree: the reserve is what the gate keeps free, the utilization is what the engine is told it may claim. A gate that admits 95 GB while vLLM is configured to hold 83 GB passes candidates the engine then fails on. On unified memory this fraction is shared with the operating system, not with a spare board, so 30/0.70 rather than the 20/0.90 a discrete GPU tolerates.",
+    "safety_reserve_percent": 30,
     "activation_floor_gb": 1.5,
     "activation_fraction": 0.06,
     "unquantized_tail_fraction": 0.08,
@@ -90,7 +91,7 @@
 
   "search_space": {
     "kv_cache_dtypes": ["auto", "fp8"],
-    "gpu_memory_utilization": [0.90],
+    "gpu_memory_utilization": [0.70],
     "max_num_seqs": [1, 8, 32],
     "context_ladder": [8192, 32768, 131072],
     "speculative_num_tokens": 3,
