@@ -3,7 +3,11 @@ from __future__ import annotations
 import os
 from typing import Any, Dict, List, Optional, Tuple
 
-from localpilot.engines.registry import EngineRegistry, EngineSpec
+from localpilot.engines.registry import (
+    EngineRegistry,
+    EngineSpec,
+    served_models,
+)
 from localpilot.models.selector import ModelSelector, SelectionOutcome
 from localpilot.sizing import MemoryModel, decode_roofline_tokens_s
 from localpilot.planner.policies import PolicyEngine
@@ -30,6 +34,7 @@ class Planner:
         self.memory = memory_model or MemoryModel(self.policies.memory_config)
         self.selector = ModelSelector(self.memory)
         self.last_selection: Optional[SelectionOutcome] = None
+        self.last_restriction: Optional[Dict[str, Any]] = None
 
     def plan(
         self,
@@ -44,6 +49,9 @@ class Planner:
                 "No inference engine is available. Install vLLM, TensorRT-LLM, "
                 "SGLang or NIM, or run with --mode mock."
             )
+
+        models, restriction = self._restrict_to_served(models, engine_ids, runtime)
+        self.last_restriction = restriction
 
         selection = self.selector.select(intent, hardware, models, engine_ids)
         self.last_selection = selection
@@ -157,6 +165,65 @@ class Planner:
             if not progressed:
                 break
         return selected[:limit]
+
+    def _restrict_to_served(
+        self, models: List[ModelSpec], engine_ids: List[str], runtime: str
+    ) -> Tuple[List[ModelSpec], Optional[Dict[str, Any]]]:
+        """Drops models the attached server cannot serve.
+
+        In attach mode LocalPilot talks to a server someone else started,
+        and that server has one model loaded. Planning candidates for other
+        checkpoints does not compare them: every request is answered by
+        whatever is actually resident, so four candidates return four
+        measurements of one configuration. The numbers look plausible and
+        the comparison is meaningless, which is worse than an error.
+
+        So the plan is cut to what the server serves, and the reason is
+        recorded rather than left for the reader to infer from four
+        suspiciously similar rows.
+        """
+        if runtime == "mock":
+            return models, None
+
+        served: List[str] = []
+        for engine_id in engine_ids:
+            try:
+                spec = self.engines.get(engine_id)
+            except KeyError:
+                continue
+            served.extend(
+                served_models(engine_id, spec.openai_base_path or "/v1")
+            )
+        if not served:
+            return models, None
+
+        lowered = {name.lower() for name in served}
+
+        def matches(model: ModelSpec) -> bool:
+            return (
+                model.model_id.lower() in lowered
+                or model.source_id.lower() in lowered
+                or any(
+                    model.model_id.lower() in name or name in model.model_id.lower()
+                    for name in lowered
+                )
+            )
+
+        kept = [model for model in models if matches(model)]
+        dropped = [model.model_id for model in models if not matches(model)]
+        restriction = {
+            "served": served,
+            "kept": [model.model_id for model in kept],
+            "dropped": dropped,
+        }
+        if not kept:
+            raise RuntimeError(
+                "The attached server serves "
+                f"{served}, which matches no model registered for this task. "
+                "Point LOCALPILOT_*_BASE_URL at a server running a "
+                "registered model, or add this one to config/models.yaml."
+            )
+        return kept, restriction
 
     def _needs_rebuild(self, engine_id: str) -> bool:
         try:

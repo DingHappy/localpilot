@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import os
 import shutil
 import subprocess
@@ -55,6 +56,31 @@ def configured_base_url(engine_id: str) -> Optional[str]:
         if value:
             return value.rstrip("/")
     return None
+
+
+def served_models(engine_id: str, base_path: str = "/v1") -> List[str]:
+    """Which models a configured server actually serves, if any.
+
+    Attaching to a server the user already started means the plan can only
+    honestly measure what that server has loaded. Asking it is the only way
+    to know.
+    """
+    base_url = configured_base_url(engine_id)
+    if not base_url:
+        return []
+    request = urllib.request.Request(
+        f"{base_url}{(base_path or '/v1').rstrip('/')}/models", method="GET"
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=5.0) as response:
+            payload = json.loads(response.read().decode("utf-8", "replace"))
+    except Exception:
+        return []
+    return [
+        entry.get("id")
+        for entry in (payload or {}).get("data", [])
+        if entry.get("id")
+    ]
 
 
 def _endpoint_answers(base_url: str, health_path: str, timeout: float = 1.5) -> bool:

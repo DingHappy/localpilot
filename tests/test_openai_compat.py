@@ -132,6 +132,59 @@ class LaunchRefusalTests(unittest.TestCase):
             VLLMRuntime().load_model(candidate(simulated=True))
 
 
+class ServedModelNameTests(unittest.TestCase):
+    """A repository id is not a served model name.
+
+    An operator picks the served name with --served-model-name, and a
+    container commonly serves a mounted path under a short alias, so
+    sending the checkpoint's repo id gets a 404 from a server that is
+    working perfectly. This was hit on the real node: vLLM served
+    "step3-vl-10b-fp8" while the plan carried
+    "stepfun-ai/Step3-VL-10B-FP8".
+    """
+
+    def _runtime(self, listing):
+        runtime = VLLMRuntime()
+        plan = real()
+        runtime.spec = runtime.engines.get("vllm")
+        runtime.candidate = plan
+        runtime.model_name = plan.source_id
+        runtime.base_url = "http://127.0.0.1:8000"
+        runtime._get = lambda path, timeout=10.0: listing
+        return runtime
+
+    def test_a_different_served_name_is_adopted(self):
+        runtime = self._runtime({"data": [{"id": "step3-vl-10b-fp8"}]})
+        runtime._adopt_served_model_name()
+        self.assertEqual(runtime.model_name, "step3-vl-10b-fp8")
+
+    def test_a_matching_name_is_left_alone(self):
+        runtime = self._runtime(
+            {"data": [{"id": "other"}, {"id": "test/test-moe"}]}
+        )
+        runtime._adopt_served_model_name()
+        self.assertEqual(runtime.model_name, "test/test-moe")
+
+    def test_an_empty_listing_changes_nothing(self):
+        runtime = self._runtime({"data": []})
+        runtime._adopt_served_model_name()
+        self.assertEqual(runtime.model_name, "test/test-moe")
+
+    def test_a_failing_listing_changes_nothing(self):
+        runtime = VLLMRuntime()
+        plan = real()
+        runtime.spec = runtime.engines.get("vllm")
+        runtime.model_name = plan.source_id
+        runtime.base_url = "http://127.0.0.1:8000"
+
+        def boom(path, timeout=10.0):
+            raise OSError("unreachable")
+
+        runtime._get = boom
+        runtime._adopt_served_model_name()
+        self.assertEqual(runtime.model_name, "test/test-moe")
+
+
 class MeasurementMathTests(unittest.TestCase):
     def test_per_stream_rate_excludes_the_first_token(self):
         """The first token is time-to-first-token, not decode.

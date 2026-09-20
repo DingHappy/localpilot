@@ -63,46 +63,112 @@ def _distinct_prompts(
 
 
 class MemorySampler:
-    """Polls accelerator memory in the background and keeps the maximum.
+    """Samples memory during generation and keeps the peak.
 
     The engine runs in its own process, so this process's RSS is
-    irrelevant. On a unified-memory machine the accelerator reading is the
-    figure that matters, and it has to be taken while the work is running.
+    irrelevant; what matters is the pool the weights and cache live in.
+    Which pool that is depends on the platform, so the sampler picks its
+    own source rather than being told:
+
+    - **accelerator** -- NVML reports per-device used memory. Correct for a
+      discrete board.
+    - **system pool** -- on GB10 NVML answers `NVMLError_NotSupported`,
+      because a unified pool has no separate device memory to report (this
+      is also why `nvidia-smi` prints `[N/A]`). There the system view *is*
+      the accelerator view, so it is the right reading rather than a
+      substitute for one.
+
+    On the system path it tracks `total - available`, which excludes
+    reclaimable page cache, and records a baseline so the figure
+    attributable to this run can be separated from whatever else the
+    machine was already holding.
     """
 
     INTERVAL_SECONDS = 0.25
 
     def __init__(self) -> None:
         self.peak_gb: Optional[float] = None
+        self.baseline_gb: Optional[float] = None
         self.samples = 0
+        self.source: Optional[str] = None
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
 
-    def _read_gb(self) -> Optional[float]:
+    def _read_nvml_gb(self) -> Optional[float]:
         try:
             import pynvml
-
+        except ImportError:
+            return None
+        try:
             pynvml.nvmlInit()
-            try:
-                handle = pynvml.nvmlDeviceGetHandleByIndex(0)
-                return pynvml.nvmlDeviceGetMemoryInfo(handle).used / (1024**3)
-            finally:
-                pynvml.nvmlShutdown()
         except Exception:
             return None
+        try:
+            handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+            return pynvml.nvmlDeviceGetMemoryInfo(handle).used / (1024**3)
+        except Exception:
+            # Includes NVMLError_NotSupported on unified memory.
+            return None
+        finally:
+            try:
+                pynvml.nvmlShutdown()
+            except Exception:
+                pass
+
+    def _read_system_gb(self) -> Optional[float]:
+        try:
+            import psutil
+
+            memory = psutil.virtual_memory()
+            return (memory.total - memory.available) / (1024**3)
+        except ImportError:
+            pass
+        try:
+            fields = {}
+            with open("/proc/meminfo", encoding="utf-8") as handle:
+                for line in handle:
+                    key, _, rest = line.partition(":")
+                    fields[key] = int(rest.strip().split()[0])
+            total = fields.get("MemTotal")
+            available = fields.get("MemAvailable")
+            if total and available is not None:
+                return (total - available) * 1024 / (1024**3)
+        except (OSError, ValueError, IndexError):
+            pass
+        return None
+
+    def _read_gb(self) -> Optional[float]:
+        if self.source == "accelerator":
+            return self._read_nvml_gb()
+        if self.source == "system_pool":
+            return self._read_system_gb()
+        value = self._read_nvml_gb()
+        if value is not None:
+            self.source = "accelerator"
+            return value
+        value = self._read_system_gb()
+        if value is not None:
+            self.source = "system_pool"
+        return value
 
     def _run(self) -> None:
         while not self._stop.is_set():
             value = self._read_gb()
             if value is not None:
                 self.samples += 1
+                if self.baseline_gb is None:
+                    self.baseline_gb = value
                 if self.peak_gb is None or value > self.peak_gb:
                     self.peak_gb = value
             self._stop.wait(self.INTERVAL_SECONDS)
 
     def start(self) -> None:
-        if self._read_gb() is None:
+        first = self._read_gb()
+        if first is None:
             return
+        self.baseline_gb = first
+        self.peak_gb = first
+        self.samples = 1
         self._thread = threading.Thread(target=self._run, daemon=True)
         self._thread.start()
 
@@ -111,6 +177,13 @@ class MemorySampler:
         if self._thread is not None:
             self._thread.join(timeout=2.0)
             self._thread = None
+
+    @property
+    def attributable_gb(self) -> Optional[float]:
+        """Peak above the baseline, when a baseline was captured."""
+        if self.peak_gb is None or self.baseline_gb is None:
+            return None
+        return max(0.0, self.peak_gb - self.baseline_gb)
 
 
 def _percentile(values: List[float], fraction: float) -> Optional[float]:
@@ -267,6 +340,31 @@ class OpenAICompatRuntime(RuntimeProvider):
                 start_new_session=True,
             )
         self._wait_for_health()
+        self._adopt_served_model_name()
+
+    def _adopt_served_model_name(self) -> None:
+        """Ask the server which model it serves instead of assuming.
+
+        A repository id is not a served name. An operator starting vLLM
+        picks it with --served-model-name, and a container commonly serves
+        a mounted path under a short alias, so sending the checkpoint's
+        repo id gets a 404 from a server that is working perfectly.
+        """
+        base = (self.spec.openai_base_path or "/v1").rstrip("/")
+        try:
+            listing = self._get(f"{base}/models", timeout=10.0)
+        except Exception:
+            return
+        served = [
+            entry.get("id")
+            for entry in (listing or {}).get("data", [])
+            if entry.get("id")
+        ]
+        if not served:
+            return
+        if self.model_name in served:
+            return
+        self.model_name = served[0]
 
     def _wait_for_health(self) -> None:
         deadline = time.monotonic() + HEALTH_TIMEOUT_SECONDS
@@ -554,6 +652,14 @@ class OpenAICompatRuntime(RuntimeProvider):
                 "output_tokens_total": tokens_total,
                 "launch_command": self.launch_command,
                 "peak_memory_source": memory_source,
+                "memory_baseline_gb": (
+                    round(sampler.baseline_gb, 2)
+                    if sampler.baseline_gb is not None else None
+                ),
+                "memory_attributable_gb": (
+                    round(sampler.attributable_gb, 2)
+                    if sampler.attributable_gb is not None else None
+                ),
                 "distinct_prompts": len(set(batch_prompts)),
             },
             ttft_p95_ms=(
@@ -579,12 +685,12 @@ class OpenAICompatRuntime(RuntimeProvider):
             return (
                 sampler.peak_gb,
                 self._cpu_percent(),
-                f"nvml_peak_over_{sampler.samples}_samples",
+                f"{sampler.source}_peak_over_{sampler.samples}_samples",
             )
         return (
             float(self.candidate.expected_memory_gb),
             self._cpu_percent(),
-            "planner_estimate_nvml_unavailable",
+            "planner_estimate_no_readable_source",
         )
 
     @staticmethod

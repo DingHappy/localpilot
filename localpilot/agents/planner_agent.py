@@ -44,6 +44,22 @@ class PlannerAgent(Agent):
         candidates = self.planner.plan(intent, hardware, models, runtime)
         selection = self.planner.last_selection
 
+        restriction = self.planner.last_restriction
+        if restriction and restriction.get("dropped"):
+            self.record(
+                "restrict_to_served",
+                status="degraded",
+                detail=(
+                    "Attached to a server already running "
+                    f"{restriction['served']}, so the plan can only measure "
+                    f"that. Dropped {len(restriction['dropped'])} model(s) "
+                    "this server cannot answer for: "
+                    f"{', '.join(restriction['dropped'])}. Comparing across "
+                    "models needs one server per model."
+                ),
+                data=restriction,
+            )
+
         if selection and selection.rejected:
             for rejection in selection.rejected:
                 self.record(
