@@ -108,6 +108,7 @@
   "stability_gate": 0.90,
   "max_candidates": 4,
   "max_candidates_per_model": 2,
+  "max_rebuilding_candidates": 1,
 
   "judge": {
     "enabled": true,

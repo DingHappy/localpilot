@@ -27,6 +27,10 @@ class PolicyEngine:
         return int(self.data.get("max_candidates_per_model", 2))
 
     @property
+    def max_rebuilding_candidates(self) -> int:
+        return int(self.data.get("max_rebuilding_candidates", 1))
+
+    @property
     def memory_config(self) -> Dict[str, Any]:
         return dict(self.data.get("memory", {}))
 

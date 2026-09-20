@@ -138,6 +138,38 @@ class CandidateGenerationTests(unittest.TestCase):
         ids = [item.candidate_id for item in candidates]
         self.assertEqual(len(ids), len(set(ids)))
 
+    def test_an_engine_that_compiles_per_configuration_is_rationed(self):
+        """TensorRT-LLM builds an engine per configuration.
+
+        Four such candidates turn one run into an hour of compiling before a
+        single token is measured, so a plan may only spend a limited number
+        of slots on them.
+        """
+        cap = self.planner.policies.max_rebuilding_candidates
+        for priority in ("latency", "quality", "throughput"):
+            candidates = self.planner.plan(
+                intent(priority=priority), self.hardware, self.models, "mock"
+            )
+            rebuilding = [
+                item for item in candidates
+                if self.planner._needs_rebuild(item.engine)
+            ]
+            self.assertLessEqual(len(rebuilding), cap, priority)
+
+    def test_rationing_does_not_cost_a_model_its_slot(self):
+        """A model priced out of its best engine falls back, not away.
+
+        An earlier version shared one depth index across models, so a model
+        whose leading variant was rationed forfeited its slot and the set
+        collapsed onto duplicates of one model.
+        """
+        candidates = self.planner.plan(
+            intent(priority="latency"), self.hardware, self.models, "mock"
+        )
+        models = [item.model_id for item in candidates]
+        self.assertEqual(len(models), len(set(models)), models)
+        self.assertEqual(len(candidates), self.planner.policies.max_candidates)
+
     def test_no_engine_available_is_an_explicit_failure(self):
         hardware = spark_profile()
         hardware.stack = dict(hardware.stack)

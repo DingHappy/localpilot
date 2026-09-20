@@ -1,16 +1,22 @@
 {
   "_note": "Every engine here is driven through its OpenAI-compatible HTTP surface. That is what lets one benchmark harness measure time-to-first-token and inter-token latency identically across engines, so a comparison between them means something.",
-
   "engines": [
     {
       "engine_id": "vllm",
       "display_name": "vLLM",
       "kind": "server",
-      "probe": {"python_module": "vllm", "binary": "vllm"},
+      "probe": {
+        "python_module": "vllm",
+        "binary": "vllm"
+      },
       "openai_base_path": "/v1",
       "health_path": "/health",
       "launch": {
-        "command": ["vllm", "serve", "{source_id}"],
+        "command": [
+          "vllm",
+          "serve",
+          "{source_id}"
+        ],
         "arguments": {
           "--max-model-len": "{context_length}",
           "--max-num-seqs": "{max_num_seqs}",
@@ -42,17 +48,24 @@
         "speculative_decoding": true,
         "unified_memory": true
       },
-      "notes": "The default. Broadest model coverage and the only engine here that loads every checkpoint in the registry without a conversion step."
+      "notes": "The default. Broadest model coverage and the only engine here that loads every checkpoint in the registry without a conversion step.",
+      "rebuild_per_configuration": false
     },
     {
       "engine_id": "trtllm",
       "display_name": "TensorRT-LLM",
       "kind": "server",
-      "probe": {"python_module": "tensorrt_llm", "binary": "trtllm-serve"},
+      "probe": {
+        "python_module": "tensorrt_llm",
+        "binary": "trtllm-serve"
+      },
       "openai_base_path": "/v1",
       "health_path": "/health",
       "launch": {
-        "command": ["trtllm-serve", "{source_id}"],
+        "command": [
+          "trtllm-serve",
+          "{source_id}"
+        ],
         "arguments": {
           "--max_seq_len": "{context_length}",
           "--max_batch_size": "{max_num_seqs}",
@@ -78,17 +91,27 @@
         "speculative_decoding": true,
         "unified_memory": true
       },
-      "notes": "Usually the fastest once its engine is built, but the build itself is slow and per-configuration. Candidates that change only a runtime knob are cheap on vLLM and expensive here, which the planner accounts for."
+      "notes": "Usually the fastest once its engine is built, but the build is slow and happens per configuration. Every TensorRT-LLM candidate in a plan therefore costs a build before it can be measured, so the planner caps how many of them one run may contain (max_rebuilding_candidates in policies.yaml).",
+      "rebuild_per_configuration": true
     },
     {
       "engine_id": "sglang",
       "display_name": "SGLang",
       "kind": "server",
-      "probe": {"python_module": "sglang", "binary": "sglang"},
+      "probe": {
+        "python_module": "sglang",
+        "binary": "sglang"
+      },
       "openai_base_path": "/v1",
       "health_path": "/health",
       "launch": {
-        "command": ["python", "-m", "sglang.launch_server", "--model-path", "{source_id}"],
+        "command": [
+          "python",
+          "-m",
+          "sglang.launch_server",
+          "--model-path",
+          "{source_id}"
+        ],
         "arguments": {
           "--context-length": "{context_length}",
           "--max-running-requests": "{max_num_seqs}",
@@ -115,24 +138,37 @@
         "speculative_decoding": true,
         "unified_memory": true
       },
-      "notes": "Strong on structured output and prefix reuse."
+      "notes": "Strong on structured output and prefix reuse.",
+      "rebuild_per_configuration": false
     },
     {
       "engine_id": "nim",
       "display_name": "NVIDIA NIM",
       "kind": "container",
-      "probe": {"binary": "docker", "docker_image_prefix": "nvcr.io/nim/"},
+      "probe": {
+        "binary": "docker",
+        "docker_image_prefix": "nvcr.io/nim/"
+      },
       "openai_base_path": "/v1",
       "health_path": "/v1/health/ready",
       "launch": {
-        "command": ["docker", "run", "--rm", "--gpus", "all"],
+        "command": [
+          "docker",
+          "run",
+          "--rm",
+          "--gpus",
+          "all"
+        ],
         "arguments": {
           "--publish": "{port}:8000"
         },
         "flags": {},
         "speculative": {}
       },
-      "knobs": ["context_length", "max_num_seqs"],
+      "knobs": [
+        "context_length",
+        "max_num_seqs"
+      ],
       "supports": {
         "nvfp4": true,
         "fp8": true,
@@ -141,17 +177,24 @@
         "speculative_decoding": false,
         "unified_memory": true
       },
-      "notes": "Fewest knobs by design: NVIDIA has already picked a profile per GPU. Worth measuring precisely because it is the baseline a tuned configuration has to beat to justify itself."
+      "notes": "Fewest knobs by design: NVIDIA has already picked a profile per GPU. Worth measuring precisely because it is the baseline a tuned configuration has to beat to justify itself.",
+      "rebuild_per_configuration": false
     },
     {
       "engine_id": "llamacpp",
       "display_name": "llama.cpp",
       "kind": "server",
-      "probe": {"binary": "llama-server"},
+      "probe": {
+        "binary": "llama-server"
+      },
       "openai_base_path": "/v1",
       "health_path": "/health",
       "launch": {
-        "command": ["llama-server", "--model", "{model_path}"],
+        "command": [
+          "llama-server",
+          "--model",
+          "{model_path}"
+        ],
         "arguments": {
           "--ctx-size": "{context_length}",
           "--parallel": "{max_num_seqs}",
@@ -161,7 +204,10 @@
         "flags": {},
         "speculative": {}
       },
-      "knobs": ["context_length", "max_num_seqs"],
+      "knobs": [
+        "context_length",
+        "max_num_seqs"
+      ],
       "supports": {
         "nvfp4": false,
         "fp8": false,
@@ -170,17 +216,27 @@
         "speculative_decoding": true,
         "unified_memory": true
       },
-      "notes": "GGUF only, so it cannot serve the NVFP4 checkpoints that this platform is built around. Kept as the CPU-capable fallback."
+      "notes": "GGUF only, so it cannot serve the NVFP4 checkpoints that this platform is built around. Kept as the CPU-capable fallback.",
+      "rebuild_per_configuration": false
     },
     {
       "engine_id": "transformers",
       "display_name": "Transformers",
       "kind": "library",
-      "probe": {"python_module": "transformers"},
+      "probe": {
+        "python_module": "transformers"
+      },
       "openai_base_path": null,
       "health_path": null,
-      "launch": {"command": [], "arguments": {}, "flags": {}, "speculative": {}},
-      "knobs": ["context_length"],
+      "launch": {
+        "command": [],
+        "arguments": {},
+        "flags": {},
+        "speculative": {}
+      },
+      "knobs": [
+        "context_length"
+      ],
       "supports": {
         "nvfp4": false,
         "fp8": true,
@@ -189,7 +245,8 @@
         "speculative_decoding": true,
         "unified_memory": true
       },
-      "notes": "Reference path for modalities no server engine covers yet, such as end-to-end speech. Never a throughput candidate."
+      "notes": "Reference path for modalities no server engine covers yet, such as end-to-end speech. Never a throughput candidate.",
+      "rebuild_per_configuration": false
     }
   ]
 }

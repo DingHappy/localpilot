@@ -120,15 +120,49 @@ class Planner:
                 model_order.append(candidate.model_id)
             by_model[candidate.model_id].append(candidate)
 
+        # An engine that compiles per configuration charges a build for every
+        # candidate it appears in. Four of those turns one run into an hour of
+        # compiling before a single token is measured, so a plan may only
+        # spend a limited number of slots on them.
+        #
+        # A model whose best variant is priced out must fall back to its next
+        # one rather than forfeit its slot, so each model carries its own
+        # cursor instead of every model sharing a depth index.
+        rebuild_budget = self.policies.max_rebuilding_candidates
+        rebuilding = 0
+        cursors = {model_id: 0 for model_id in model_order}
+        taken = {model_id: 0 for model_id in model_order}
+
         selected: List[CandidatePlan] = []
-        for depth in range(per_model):
+        for _ in range(per_model):
+            progressed = False
             for model_id in model_order:
                 if len(selected) >= limit:
                     return selected
+                if taken[model_id] >= per_model:
+                    continue
                 bucket = by_model[model_id]
-                if depth < len(bucket):
-                    selected.append(bucket[depth])
+                while cursors[model_id] < len(bucket):
+                    candidate = bucket[cursors[model_id]]
+                    cursors[model_id] += 1
+                    rebuilds = self._needs_rebuild(candidate.engine)
+                    if rebuilds and rebuilding >= rebuild_budget:
+                        continue
+                    if rebuilds:
+                        rebuilding += 1
+                    selected.append(candidate)
+                    taken[model_id] += 1
+                    progressed = True
+                    break
+            if not progressed:
+                break
         return selected[:limit]
+
+    def _needs_rebuild(self, engine_id: str) -> bool:
+        try:
+            return self.engines.get(engine_id).rebuild_per_configuration
+        except KeyError:
+            return False
 
     # ------------------------------------------------------------------
     # candidate construction

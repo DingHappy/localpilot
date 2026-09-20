@@ -21,6 +21,7 @@ class EngineSpec:
     launch: Dict[str, Any] = field(default_factory=dict)
     knobs: List[str] = field(default_factory=list)
     supports: Dict[str, Any] = field(default_factory=dict)
+    rebuild_per_configuration: bool = False
     notes: str = ""
 
     def supports_feature(self, name: str) -> bool:
@@ -36,6 +37,7 @@ class EngineSpec:
             "kind": self.kind,
             "knobs": list(self.knobs),
             "supports": dict(self.supports),
+            "rebuild_per_configuration": self.rebuild_per_configuration,
             "notes": self.notes,
         }
 
