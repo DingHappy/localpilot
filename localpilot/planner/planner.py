@@ -3,11 +3,8 @@ from __future__ import annotations
 import os
 from typing import Any, Dict, List, Optional, Tuple
 
-from localpilot.engines.registry import (
-    EngineRegistry,
-    EngineSpec,
-    served_models,
-)
+from localpilot.engines.introspect import ServerConfig, introspect, reconcile
+from localpilot.engines.registry import EngineRegistry, EngineSpec
 from localpilot.models.selector import ModelSelector, SelectionOutcome
 from localpilot.sizing import MemoryModel, decode_roofline_tokens_s
 from localpilot.planner.policies import PolicyEngine
@@ -35,6 +32,8 @@ class Planner:
         self.selector = ModelSelector(self.memory)
         self.last_selection: Optional[SelectionOutcome] = None
         self.last_restriction: Optional[Dict[str, Any]] = None
+        self.attached_config: Optional[ServerConfig] = None
+        self.last_reconciliation: Optional[Dict[str, Any]] = None
 
     def plan(
         self,
@@ -100,7 +99,87 @@ class Planner:
             )
 
         candidates.sort(key=lambda item: item[0], reverse=True)
-        return self._diversify(candidates)
+        chosen = self._diversify(candidates)
+        return self._reconcile_with_server(chosen)
+
+    def _reconcile_with_server(
+        self, candidates: List[CandidatePlan]
+    ) -> List[CandidatePlan]:
+        """Keeps only candidates the attached server would really run.
+
+        A knob in a candidate is an instruction to an engine LocalPilot
+        starts. Against a server someone else started it is only a claim:
+        the server has one cache dtype, one utilization, one context limit,
+        and answers every request with those. Measuring a candidate whose
+        knobs differ from the server's produces a number correctly labelled
+        as something it is not -- so an attached run collapses to the one
+        configuration that is actually running.
+        """
+        config = self.attached_config
+        if config is None or not config.raw_available or not candidates:
+            self.last_reconciliation = None
+            return candidates
+
+        # Utilization is the one knob worth adopting rather than rejecting
+        # over: it describes how much of the pool the server was given, not
+        # what the candidate is. Adopting it keeps the candidate honest
+        # about the configuration it will actually be measured under, and
+        # the trace records that it was adopted rather than requested.
+        adopted = []
+        if config.gpu_memory_utilization is not None:
+            for candidate in candidates:
+                declared = (candidate.runtime_config or {}).get(
+                    "gpu_memory_utilization"
+                )
+                if (
+                    declared is not None
+                    and abs(float(declared) - config.gpu_memory_utilization) > 0.01
+                ):
+                    candidate.runtime_config = dict(candidate.runtime_config)
+                    candidate.runtime_config["gpu_memory_utilization"] = (
+                        config.gpu_memory_utilization
+                    )
+                    candidate.knobs = dict(candidate.knobs)
+                    candidate.knobs["gpu_memory_utilization"] = (
+                        config.gpu_memory_utilization
+                    )
+                    adopted.append(
+                        f"{candidate.candidate_id}: utilization "
+                        f"{declared} -> {config.gpu_memory_utilization}"
+                    )
+
+        kept, rejected = [], []
+        for candidate in candidates:
+            mismatches = reconcile(candidate, config)
+            if mismatches:
+                rejected.append(
+                    {
+                        "candidate_id": candidate.candidate_id,
+                        "mismatches": mismatches,
+                    }
+                )
+            else:
+                kept.append(candidate)
+
+        self.last_reconciliation = {
+            "server": config.to_dict(),
+            "kept": [item.candidate_id for item in kept],
+            "rejected": rejected,
+            "adopted": adopted,
+        }
+        if not kept:
+            raise RuntimeError(
+                "No candidate matches the attached server's actual "
+                "configuration:\n  "
+                + "\n  ".join(
+                    f"{item['candidate_id']}: {'; '.join(item['mismatches'])}"
+                    for item in rejected
+                )
+                + "\nEither restart the server with the configuration you "
+                "want measured, or set LOCALPILOT_ALLOW_ENGINE_LAUNCH=1 so "
+                "LocalPilot can configure one per candidate."
+            )
+        return kept
 
     def _diversify(
         self, ranked: List[Tuple[float, CandidatePlan]]
@@ -186,14 +265,18 @@ class Planner:
             return models, None
 
         served: List[str] = []
+        self.attached_config = None
         for engine_id in engine_ids:
             try:
                 spec = self.engines.get(engine_id)
             except KeyError:
                 continue
-            served.extend(
-                served_models(engine_id, spec.openai_base_path or "/v1")
-            )
+            config = introspect(engine_id, spec.openai_base_path or "/v1")
+            if config is None:
+                continue
+            if self.attached_config is None and config.served_models:
+                self.attached_config = config
+            served.extend(config.served_models)
         if not served:
             return models, None
 

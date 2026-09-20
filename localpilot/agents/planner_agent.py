@@ -60,6 +60,50 @@ class PlannerAgent(Agent):
                 data=restriction,
             )
 
+        rec = self.planner.last_reconciliation
+        if rec and rec.get("rejected"):
+            server = rec["server"]
+            self.record(
+                "reconcile_with_server",
+                status="degraded",
+                detail=(
+                    "The attached server runs one configuration "
+                    f"(kv={server.get('cache_dtype')}, "
+                    f"util={server.get('gpu_memory_utilization')}, "
+                    f"max_len={server.get('max_model_len')}), so "
+                    f"{len(rec['rejected'])} candidate(s) whose knobs differ "
+                    "were dropped rather than measured under a label they do "
+                    "not match: "
+                    + "; ".join(
+                        f"{item['candidate_id']} [{', '.join(item['mismatches'])}]"
+                        for item in rec["rejected"]
+                    )
+                ),
+                data=rec,
+            )
+        if rec and rec.get("adopted"):
+            self.record(
+                "adopt_server_knobs",
+                status="degraded",
+                detail=(
+                    "Adopted the server's own setting rather than measuring "
+                    "under a label it does not match: "
+                    + "; ".join(rec["adopted"])
+                ),
+                data={"adopted": rec["adopted"]},
+            )
+        if rec and not rec.get("rejected"):
+            self.record(
+                "reconcile_with_server",
+                detail=(
+                    "Candidate knobs match the attached server: "
+                    f"kv={rec['server'].get('cache_dtype')}, "
+                    f"util={rec['server'].get('gpu_memory_utilization')}, "
+                    f"kv capacity {rec['server'].get('kv_capacity_tokens')} tokens"
+                ),
+                data=rec,
+            )
+
         if selection and selection.rejected:
             for rejection in selection.rejected:
                 self.record(

@@ -570,6 +570,10 @@ class OpenAICompatRuntime(RuntimeProvider):
         primary = prompts[0]["text"]
         concurrency = max(1, self.candidate.concurrency)
         batch_prompts = _distinct_prompts(prompts, concurrency)
+        # Serial runs rotate too. Repeating one prompt lets warmup populate
+        # the prefix cache and every measured run hit it, so the reported
+        # TTFT describes a cache hit rather than a prefill.
+        serial_prompts = _distinct_prompts(prompts, max(1, measured_runs))
 
         for _ in range(max(0, warmup_runs)):
             self._stream_once(primary, max_new_tokens)
@@ -583,9 +587,12 @@ class OpenAICompatRuntime(RuntimeProvider):
         all_samples: List[StreamSample] = []
         wall_times: List[float] = []
         try:
-            for _ in range(max(1, measured_runs)):
+            for index in range(max(1, measured_runs)):
                 if concurrency == 1:
-                    sample = self._stream_once(primary, max_new_tokens)
+                    sample = self._stream_once(
+                        serial_prompts[index % len(serial_prompts)],
+                        max_new_tokens,
+                    )
                     all_samples.append(sample)
                     wall_times.append(sample.total_ms)
                 else:
@@ -630,7 +637,10 @@ class OpenAICompatRuntime(RuntimeProvider):
                 quality_hits += 1
         keyword_quality = quality_hits / max(1, len(prompts))
 
-        peak_memory_gb, cpu_percent, memory_source = self._resource_usage(sampler)
+        engine_report = self._engine_memory_report()
+        peak_memory_gb, cpu_percent, memory_source = self._resource_usage(
+            sampler, engine_report
+        )
 
         return BenchmarkMetrics(
             ttft_ms=round(mean(ttfts), 2),
@@ -660,7 +670,8 @@ class OpenAICompatRuntime(RuntimeProvider):
                     round(sampler.attributable_gb, 2)
                     if sampler.attributable_gb is not None else None
                 ),
-                "distinct_prompts": len(set(batch_prompts)),
+                "distinct_prompts": len(set(batch_prompts + serial_prompts)),
+                "engine_memory": engine_report,
             },
             ttft_p95_ms=(
                 round(_percentile(ttfts, 0.95), 2)
@@ -672,15 +683,78 @@ class OpenAICompatRuntime(RuntimeProvider):
             quality_keyword=round(keyword_quality, 3),
         )
 
-    def _resource_usage(
-        self, sampler: "MemorySampler"
-    ) -> Tuple[float, Optional[float], str]:
-        """The observed memory peak, or an honest label saying it is not one.
+    def _engine_memory_report(self) -> Optional[Dict[str, Any]]:
+        """What the engine says it reserved, which is the real footprint.
 
-        Falling back to the planner's estimate is unavoidable without NVML,
-        but it must not be passed off as an observation, so the source
-        travels with the number.
+        Sampling a pool cannot answer this in attach mode: the weights are
+        resident before sampling starts, so the baseline already contains
+        them and the observed delta is noise. The engine, on the other
+        hand, knows exactly how many KV blocks it allocated.
         """
+        if self.spec is None or self.candidate is None:
+            return None
+        from localpilot.engines.introspect import introspect
+
+        config = introspect(
+            self.spec.engine_id,
+            self.spec.openai_base_path or "/v1",
+            base_url=self.base_url,
+        )
+        if config is None or not config.raw_available:
+            return None
+
+        kv_bytes = self._kv_bytes_per_token()
+        kv_gb = config.kv_allocated_gb(kv_bytes) if kv_bytes else None
+        weights_gb = self._weights_gb()
+        total = None
+        if kv_gb is not None and weights_gb is not None:
+            total = kv_gb + weights_gb
+        return {
+            "server": config.to_dict(),
+            "kv_allocated_gb": None if kv_gb is None else round(kv_gb, 2),
+            "weights_gb": weights_gb,
+            "total_gb": None if total is None else round(total, 2),
+        }
+
+    def _kv_bytes_per_token(self) -> Optional[float]:
+        from localpilot.models.registry import ModelRegistry
+
+        try:
+            return ModelRegistry().get(self.candidate.model_id).kv_bytes_per_token
+        except Exception:
+            return None
+
+    def _weights_gb(self) -> Optional[float]:
+        from localpilot.models.registry import ModelRegistry
+
+        try:
+            return ModelRegistry().get(self.candidate.model_id).weights_gb or None
+        except Exception:
+            return None
+
+    def _resource_usage(
+        self,
+        sampler: "MemorySampler",
+        engine_report: Optional[Dict[str, Any]] = None,
+    ) -> Tuple[float, Optional[float], str]:
+        """The footprint, from the most trustworthy source available.
+
+        Preference order, because each later option describes something
+        progressively further from "what this configuration needs":
+
+        1. **the engine's own accounting** -- allocated KV blocks plus the
+           checkpoint's measured weight size.
+        2. **a sampled pool peak** -- correct on a quiet machine, but it
+           includes whatever else the pool was holding.
+        3. **the planner's estimate** -- not an observation at all, and
+           labelled so.
+        """
+        if engine_report and engine_report.get("total_gb") is not None:
+            return (
+                float(engine_report["total_gb"]),
+                self._cpu_percent(),
+                "engine_reported_weights_plus_allocated_kv",
+            )
         if sampler.peak_gb is not None:
             return (
                 sampler.peak_gb,
