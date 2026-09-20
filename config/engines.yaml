@@ -1,5 +1,5 @@
 {
-  "_note": "Every engine here is driven through its OpenAI-compatible HTTP surface. That is what lets one benchmark harness measure time-to-first-token and inter-token latency identically across engines, so a comparison between them means something.",
+  "_note": "Every engine here is driven through its OpenAI-compatible HTTP surface. That is what lets one benchmark harness measure time-to-first-token and inter-token latency identically across engines, so a comparison between them means something. It also means 'installed' is the wrong question: on DGX Spark the supported way to run vLLM is a container, so an engine counts as available when it is reachable at a configured base URL, or when a matching container image is present locally, or when it is installed on the host -- in that order of strength.",
   "engines": [
     {
       "engine_id": "vllm",
@@ -7,7 +7,11 @@
       "kind": "server",
       "probe": {
         "python_module": "vllm",
-        "binary": "vllm"
+        "binary": "vllm",
+        "docker_image_contains": [
+          "nvcr.io/nvidia/vllm",
+          "vllm"
+        ]
       },
       "openai_base_path": "/v1",
       "health_path": "/health",
@@ -57,7 +61,12 @@
       "kind": "server",
       "probe": {
         "python_module": "tensorrt_llm",
-        "binary": "trtllm-serve"
+        "binary": "trtllm-serve",
+        "docker_image_contains": [
+          "nvcr.io/nvidia/tensorrt-llm",
+          "tensorrt_llm",
+          "trtllm"
+        ]
       },
       "openai_base_path": "/v1",
       "health_path": "/health",
@@ -100,7 +109,11 @@
       "kind": "server",
       "probe": {
         "python_module": "sglang",
-        "binary": "sglang"
+        "binary": "sglang",
+        "docker_image_contains": [
+          "lmsysorg/sglang",
+          "sglang"
+        ]
       },
       "openai_base_path": "/v1",
       "health_path": "/health",
@@ -147,7 +160,9 @@
       "kind": "container",
       "probe": {
         "binary": "docker",
-        "docker_image_prefix": "nvcr.io/nim/"
+        "docker_image_contains": [
+          "nvcr.io/nim/"
+        ]
       },
       "openai_base_path": "/v1",
       "health_path": "/v1/health/ready",

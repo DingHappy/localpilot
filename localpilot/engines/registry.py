@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import importlib.util
-import subprocess
+import os
 import shutil
+import subprocess
+import urllib.error
+import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -42,51 +45,34 @@ class EngineSpec:
         }
 
 
-def probe_engine(spec: EngineSpec) -> Dict[str, Any]:
-    """Look for an engine without importing or running it.
-
-    Importing vllm or tensorrt_llm initializes CUDA and costs seconds, so a
-    check that has to run before every plan uses spec lookup and PATH only.
-    """
-    module = spec.probe.get("python_module")
-    binary = spec.probe.get("binary")
-    found_module = None
-    if module:
-        try:
-            found_module = importlib.util.find_spec(module) is not None
-        except (ImportError, ValueError):
-            found_module = False
-    binary_path = shutil.which(binary) if binary else None
-
-    available = bool(found_module) or bool(binary_path)
-    image_prefix = spec.probe.get("docker_image_prefix")
-    images = None
-    if spec.kind == "container" and image_prefix:
-        # A container runtime on PATH says nothing about whether the image
-        # is here. Reporting the engine as available on that basis would
-        # put a candidate into the plan that cannot start without a pull.
-        images = _local_images(binary_path, image_prefix)
-        available = bool(binary_path) and bool(images)
-
-    report = {
-        "engine_id": spec.engine_id,
-        "available": available,
-        "python_module": found_module,
-        "binary_path": binary_path,
-        "kind": spec.kind,
-    }
-    if images is not None:
-        report["local_images"] = images
-        if binary_path and not images:
-            report["detail"] = (
-                f"{binary} is installed but no {image_prefix}* image is "
-                "present locally"
-            )
-    return report
+def configured_base_url(engine_id: str) -> Optional[str]:
+    """A server the user already runs, per engine or as a global default."""
+    for variable in (
+        f"LOCALPILOT_{engine_id.upper()}_BASE_URL",
+        "LOCALPILOT_ENGINE_BASE_URL",
+    ):
+        value = os.environ.get(variable)
+        if value:
+            return value.rstrip("/")
+    return None
 
 
-def _local_images(binary_path: Optional[str], prefix: str) -> List[str]:
-    if not binary_path:
+def _endpoint_answers(base_url: str, health_path: str, timeout: float = 1.5) -> bool:
+    request = urllib.request.Request(
+        f"{base_url}{health_path or '/health'}", method="GET"
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return 200 <= response.status < 500
+    except urllib.error.HTTPError as exc:
+        # A 4xx still proves something is listening and speaking HTTP.
+        return exc.code < 500
+    except Exception:
+        return False
+
+
+def _local_images(binary_path: Optional[str], patterns: List[str]) -> List[str]:
+    if not binary_path or not patterns:
         return []
     try:
         result = subprocess.run(
@@ -98,11 +84,98 @@ def _local_images(binary_path: Optional[str], prefix: str) -> List[str]:
         )
     except (OSError, subprocess.SubprocessError):
         return []
-    return [
-        line.strip()
-        for line in result.stdout.splitlines()
-        if line.strip().startswith(prefix)
-    ]
+    found = []
+    for line in result.stdout.splitlines():
+        name = line.strip()
+        if name and any(pattern in name for pattern in patterns):
+            found.append(name)
+    return found
+
+
+def _container_runtime() -> Optional[str]:
+    for candidate in ("docker", "podman"):
+        path = shutil.which(candidate)
+        if path:
+            return path
+    return None
+
+
+def probe_engine(spec: EngineSpec) -> Dict[str, Any]:
+    """Decides whether this engine can actually serve on this machine.
+
+    "Is it installed on the host" is the wrong question. On DGX Spark the
+    supported way to run vLLM is a container, so a host-only probe reports
+    every engine missing on a machine that is ready to serve. Three signals
+    are checked, strongest first:
+
+    1. **reachable** -- a configured base URL answers its health path. This
+       is proof rather than inference: something is serving right now.
+    2. **container** -- a matching image is present locally, so it can be
+       started without a pull.
+    3. **host** -- the module or binary is installed directly.
+
+    Nothing here imports the engine or starts anything: importing vllm or
+    tensorrt_llm initializes CUDA and costs seconds, and this runs before
+    every plan.
+    """
+    module = spec.probe.get("python_module")
+    binary = spec.probe.get("binary")
+
+    found_module = None
+    if module:
+        try:
+            found_module = importlib.util.find_spec(module) is not None
+        except (ImportError, ValueError):
+            found_module = False
+    binary_path = shutil.which(binary) if binary else None
+
+    report: Dict[str, Any] = {
+        "engine_id": spec.engine_id,
+        "kind": spec.kind,
+        "python_module": found_module,
+        "binary_path": binary_path,
+        "available": False,
+        "source": None,
+    }
+
+    base_url = configured_base_url(spec.engine_id)
+    if base_url:
+        report["base_url"] = base_url
+        if _endpoint_answers(base_url, spec.health_path):
+            report["available"] = True
+            report["source"] = "reachable"
+            report["detail"] = f"answering at {base_url}"
+            return report
+        report["detail"] = (
+            f"{base_url} is configured but not answering "
+            f"{spec.health_path or '/health'}"
+        )
+
+    patterns = spec.probe.get("docker_image_contains") or []
+    runtime = _container_runtime()
+    if patterns:
+        images = _local_images(runtime, patterns)
+        report["local_images"] = images
+        if images:
+            report["available"] = True
+            report["source"] = "container"
+            report.setdefault("detail", f"image present: {images[0]}")
+            return report
+        if runtime and not report.get("detail"):
+            report["detail"] = (
+                f"{Path(runtime).name} is installed but no image matching "
+                f"{patterns} is present locally"
+            )
+
+    # The host fallback must not apply to a container engine: its `binary`
+    # is the container runtime, not the engine. Counting `docker` on PATH as
+    # "NIM is available" puts a candidate in the plan that cannot start
+    # without a multi-gigabyte pull.
+    if spec.kind != "container" and (found_module or binary_path):
+        report["available"] = True
+        report["source"] = "host"
+        report.setdefault("detail", binary_path or f"python module {module}")
+    return report
 
 
 class EngineRegistry:

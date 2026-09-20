@@ -1,4 +1,6 @@
+import os
 import unittest
+from unittest import mock
 
 from localpilot.engines.registry import EngineRegistry, EngineSpec, probe_engine
 
@@ -49,19 +51,22 @@ class ContainerProbeTests(unittest.TestCase):
         """Docker on PATH says nothing about whether the image is here.
 
         Counting it as available would put a candidate in the plan that
-        cannot start without a multi-gigabyte pull.
+        cannot start without a multi-gigabyte pull. The container runtime
+        is not the engine, so the host fallback must not rescue it.
         """
         spec = EngineSpec(
             engine_id="nim-test",
             display_name="test",
             kind="container",
-            probe={"binary": "docker", "docker_image_prefix": "nvcr.io/nim/"},
+            probe={"binary": "docker",
+                   "docker_image_contains": ["nvcr.io/nim/"]},
             openai_base_path="/v1",
         )
-        report = probe_engine(spec)
+        with mock.patch.dict(os.environ, {}, clear=True):
+            report = probe_engine(spec)
         if report.get("binary_path") and not report.get("local_images"):
             self.assertFalse(report["available"])
-            self.assertIn("no nvcr.io/nim/* image", report["detail"])
+            self.assertIn("no image matching", report["detail"])
 
     def test_a_missing_runtime_is_simply_unavailable(self):
         spec = EngineSpec(
@@ -69,11 +74,75 @@ class ContainerProbeTests(unittest.TestCase):
             display_name="test",
             kind="container",
             probe={"binary": "definitely-not-a-real-binary",
-                   "docker_image_prefix": "nvcr.io/nim/"},
+                   "docker_image_contains": ["nvcr.io/nim/"]},
         )
-        report = probe_engine(spec)
+        with mock.patch.dict(os.environ, {}, clear=True):
+            report = probe_engine(spec)
         self.assertFalse(report["available"])
         self.assertIsNone(report["binary_path"])
+
+
+class ProbeSourceTests(unittest.TestCase):
+    """On DGX Spark the supported way to run vLLM is a container.
+
+    A probe that only looks at the host PATH reports every engine missing
+    on a machine that already holds the official image, which is what
+    happened on the real node.
+    """
+
+    def _spec(self, kind="server"):
+        return EngineSpec(
+            engine_id="vllm",
+            display_name="vLLM",
+            kind=kind,
+            probe={"python_module": "definitely_not_installed",
+                   "binary": "definitely-not-a-real-binary",
+                   "docker_image_contains": ["nvcr.io/nvidia/vllm"]},
+            openai_base_path="/v1",
+            health_path="/health",
+        )
+
+    def test_a_local_image_makes_a_server_engine_available(self):
+        with mock.patch.dict(os.environ, {}, clear=True), \
+             mock.patch("localpilot.engines.registry._local_images",
+                        return_value=["nvcr.io/nvidia/vllm:26.02-py3"]), \
+             mock.patch("localpilot.engines.registry._container_runtime",
+                        return_value="/usr/bin/docker"):
+            report = probe_engine(self._spec())
+        self.assertTrue(report["available"])
+        self.assertEqual(report["source"], "container")
+        self.assertIn("26.02-py3", report["detail"])
+
+    def test_a_reachable_endpoint_outranks_everything(self):
+        """Something answering right now is proof, not inference."""
+        with mock.patch.dict(
+            os.environ, {"LOCALPILOT_VLLM_BASE_URL": "http://127.0.0.1:8000"},
+            clear=True,
+        ), mock.patch("localpilot.engines.registry._endpoint_answers",
+                      return_value=True):
+            report = probe_engine(self._spec())
+        self.assertTrue(report["available"])
+        self.assertEqual(report["source"], "reachable")
+
+    def test_a_configured_but_dead_endpoint_says_so(self):
+        with mock.patch.dict(
+            os.environ, {"LOCALPILOT_VLLM_BASE_URL": "http://127.0.0.1:8000"},
+            clear=True,
+        ), mock.patch("localpilot.engines.registry._endpoint_answers",
+                      return_value=False), \
+             mock.patch("localpilot.engines.registry._local_images",
+                        return_value=[]):
+            report = probe_engine(self._spec())
+        self.assertFalse(report["available"])
+        self.assertIn("not answering", report["detail"])
+
+    def test_every_report_names_the_signal_it_used(self):
+        for report in EngineRegistry().probe_all().values():
+            self.assertIn("source", report)
+            if report["available"]:
+                self.assertIn(
+                    report["source"], {"reachable", "container", "host"}
+                )
 
 
 if __name__ == "__main__":

@@ -160,8 +160,9 @@ def command_doctor(args) -> int:
     print("Engines")
     for engine_id, report in profile.engines.items():
         mark = "yes" if report.get("available") else "no "
-        detail = report.get("detail") or report.get("binary_path") or ""
-        print(f"  [{mark}] {engine_id:14s} {detail}")
+        source = report.get("source") or "-"
+        detail = report.get("detail") or ""
+        print(f"  [{mark}] {engine_id:14s} {source:10s} {detail}")
 
     print()
     print(f"Real execution ready: {profile.real_execution_ready}")
