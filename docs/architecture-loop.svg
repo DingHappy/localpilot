@@ -1,0 +1,174 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 880" width="1280" height="880" role="img" aria-label="LocalPilot autopilot loop: understand, inspect, recall, plan, measure each candidate, recover, rank, remember">
+<title>LocalPilot — the autopilot loop</title>
+<desc>A natural-language goal is parsed, the machine is inspected, a stored profile is looked up and bypasses the search on a hit, otherwise candidates are planned, each is served and measured and graded, bounded recovery runs only if all fail, the results are ranked and the winner is remembered.</desc>
+
+<style>
+  .bg    { fill: #ffffff; }
+  .card  { fill: #f6f8f5; stroke: #d5ded4; stroke-width: 1.5; }
+  .card-accent { fill: #f2f8e8; stroke: #a9cc6b; stroke-width: 1.5; }
+  .card-group  { fill: #fbfcfa; stroke: #c5d2c3; stroke-width: 1.5; }
+  .card-sub    { fill: #ffffff; stroke: #dde5dc; stroke-width: 1.2; }
+  .card-warn   { fill: #fdf7ea; stroke: #dcbb78; stroke-width: 1.5; stroke-dasharray: 6 4; }
+  .card-note   { fill: #f9faf8; stroke: #e2e8e1; stroke-width: 1.2; }
+  .pill        { fill: #76b900; }
+
+  text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+  .h1    { font-size: 25px; font-weight: 700; fill: #16211a; }
+  .h2    { font-size: 14px; fill: #5d6b60; }
+  .step  { font-size: 11px; font-weight: 700; fill: #76b900; letter-spacing: .12em; }
+  .title { font-size: 15.5px; font-weight: 650; fill: #16211a; }
+  .mod   { font-size: 11px; fill: #7c8a7f; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .body  { font-size: 12.5px; fill: #3c4a40; }
+  .em    { font-size: 12.5px; fill: #16211a; font-weight: 600; }
+  .warn  { font-size: 12.5px; fill: #8a6209; }
+  .edge  { stroke: #8fa093; stroke-width: 1.8; fill: none; }
+  .edge-accent { stroke: #76b900; stroke-width: 2.2; fill: none; }
+  .edge-warn   { stroke: #c9a45a; stroke-width: 1.8; fill: none; stroke-dasharray: 6 4; }
+  .lbl   { font-size: 11.5px; fill: #6b7a6e; }
+  .lbl-accent { font-size: 12px; fill: #4f7c00; font-weight: 650; }
+  .pill-text  { font-size: 14px; font-weight: 700; fill: #ffffff; }
+</style>
+
+<defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#8fa093"/>
+  </marker>
+  <marker id="arrow-accent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#76b900"/>
+  </marker>
+  <marker id="arrow-warn" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#c9a45a"/>
+  </marker>
+</defs>
+
+<rect class="bg" x="0" y="0" width="1280" height="880"/>
+
+<text class="h1" x="48" y="50">LocalPilot — the autopilot loop</text>
+<text class="h2" x="48" y="76">One natural-language goal in; a measured, remembered serving configuration out.</text>
+
+<!-- ============ LEFT COLUMN ============ -->
+
+<!-- 1 UNDERSTAND -->
+<rect class="card" x="48" y="112" width="540" height="92" rx="9"/>
+<text class="step"  x="68" y="136">1 · UNDERSTAND</text>
+<text class="title" x="68" y="160">What was actually asked for</text>
+<text class="mod"   x="68" y="180">intent/parser.py</text>
+<text class="body"  x="68" y="196">task · priority · context · concurrency · modality · privacy</text>
+
+<path class="edge" d="M 318 204 L 318 226" marker-end="url(#arrow)"/>
+
+<!-- 2 INSPECT -->
+<rect class="card" x="48" y="228" width="540" height="92" rx="9"/>
+<text class="step"  x="68" y="252">2 · INSPECT</text>
+<text class="title" x="68" y="276">What this machine really is</text>
+<text class="mod"   x="68" y="296">hardware/profiler.py · engines/registry.py</text>
+<text class="body"  x="68" y="312">platform · unified memory · bandwidth · engines actually installed</text>
+
+<path class="edge" d="M 318 320 L 318 342" marker-end="url(#arrow)"/>
+
+<!-- 3 RECALL -->
+<rect class="card-accent" x="48" y="344" width="540" height="104" rx="9"/>
+<text class="step"  x="68" y="368">3 · RECALL</text>
+<text class="title" x="68" y="392">Has this exact question been answered here before?</text>
+<text class="mod"   x="68" y="412">profiles/store.py</text>
+<text class="body"  x="68" y="428">A profile keyed on hardware fingerprint + task + priority,</text>
+<text class="body"  x="68" y="442">re-verified by a live health check before it is trusted.</text>
+
+<path class="edge" d="M 318 448 L 318 470" marker-end="url(#arrow)"/>
+<text class="lbl" x="330" y="464">miss</text>
+
+<!-- 4 PLAN -->
+<rect class="card" x="48" y="472" width="540" height="182" rx="9"/>
+<text class="step"  x="68" y="496">4 · PLAN</text>
+<text class="title" x="68" y="520">What is worth spending a real benchmark on</text>
+<text class="mod"   x="68" y="540">models/selector.py · planner/planner.py · sizing.py</text>
+<text class="em"    x="68" y="562">gate</text>
+<text class="body"  x="110" y="562">modality · device · engine · context · memory budget</text>
+<text class="em"    x="68" y="582">search</text>
+<text class="body"  x="110" y="582">engine × precision × KV dtype × context × batch × spec decode</text>
+<text class="em"    x="68" y="602">spread</text>
+<text class="body"  x="110" y="602">distinct models before knob variants of one model</text>
+<text class="body"  x="68" y="628">Rejections are kept with the gate and the number, because</text>
+<text class="body"  x="68" y="642">"needs 328 GB, you have 128" is the useful answer.</text>
+
+<!-- NOTE -->
+<rect class="card-note" x="48" y="686" width="540" height="150" rx="9"/>
+<text class="step"  x="68" y="710">SEPARATED AUTHORITY</text>
+<text class="body"  x="68" y="734">The planner proposes but never measures.</text>
+<text class="body"  x="68" y="752">The bench agent measures but never grades quality.</text>
+<text class="body"  x="68" y="770">The judge grades quality but never ranks.</text>
+<text class="body"  x="68" y="788">The optimizer ranks but never measures.</text>
+<text class="em"    x="68" y="812">Nothing marks its own homework.</text>
+<text class="mod"   x="68" y="828">agents/{planner,bench,judge}_agent.py</text>
+
+<!-- 4 -> 5 elbow -->
+<path class="edge" d="M 588 563 L 644 563 L 644 288 L 694 288" marker-end="url(#arrow)"/>
+
+<!-- ============ RIGHT COLUMN ============ -->
+
+<!-- 5 MEASURE EACH CANDIDATE -->
+<rect class="card-group" x="700" y="112" width="532" height="320" rx="9"/>
+<text class="step"  x="720" y="136">5 · FOR EACH CANDIDATE, IN TURN</text>
+<text class="title" x="720" y="160">Serve it, measure it, grade it</text>
+<text class="mod"   x="720" y="178">executor/executor.py</text>
+
+<rect class="card-sub" x="720" y="190" width="492" height="60" rx="7"/>
+<text class="em"   x="736" y="212">load · start · health check</text>
+<text class="body" x="736" y="232">A server that answers the port but fails health is not measured.</text>
+
+<rect class="card-sub" x="720" y="258" width="492" height="60" rx="7"/>
+<text class="em"   x="736" y="280">benchmark</text>
+<text class="body" x="736" y="300">One wire protocol for every engine, so a gap means the engine.</text>
+<text class="mod"  x="1040" y="280">runtime/openai_compat.py</text>
+
+<rect class="card-sub" x="720" y="326" width="492" height="60" rx="7"/>
+<text class="em"   x="736" y="348">grade</text>
+<text class="body" x="736" y="368">A rubric, scored by a separate model, while the server is still up.</text>
+<text class="mod"  x="1060" y="348">agents/judge_agent.py</text>
+
+<text class="body" x="720" y="410">TTFT · per-stream and aggregate tok/s · sampled memory peak ·</text>
+<text class="body" x="720" y="424">stability · blended quality — each tagged measured or modelled.</text>
+
+<!-- 5 -> 6 (failure branch) -->
+<path class="edge-warn" d="M 800 432 L 800 470" marker-end="url(#arrow-warn)"/>
+<text class="lbl" x="812" y="456">all failed</text>
+
+<!-- 6 RECOVER -->
+<rect class="card-warn" x="700" y="472" width="420" height="88" rx="9"/>
+<text class="step"  x="720" y="496">6 · RECOVER</text>
+<text class="warn"  x="720" y="518">Smaller context with an FP8 KV cache, then the smallest model.</text>
+<text class="warn"  x="720" y="536">Bounded, then it stops and returns the errors.</text>
+<text class="mod"   x="720" y="552">planner.recovery_plan</text>
+
+<!-- 5 -> 7 main path -->
+<path class="edge" d="M 1180 432 L 1180 570" marker-end="url(#arrow)"/>
+<!-- 6 -> 7 -->
+<path class="edge-warn" d="M 800 560 L 800 570" marker-end="url(#arrow-warn)"/>
+
+<!-- 7 RANK -->
+<rect class="card" x="700" y="572" width="532" height="92" rx="9"/>
+<text class="step"  x="720" y="596">7 · RANK</text>
+<text class="title" x="720" y="620">Which one actually won, under this priority</text>
+<text class="mod"   x="720" y="640">optimizer/optimizer.py · planner/scoring.py</text>
+<text class="body"  x="720" y="656">quality and stability gates first, then the priority's own weights</text>
+
+<path class="edge" d="M 966 664 L 966 686" marker-end="url(#arrow)"/>
+
+<!-- 8 REMEMBER -->
+<rect class="card-accent" x="700" y="688" width="532" height="92" rx="9"/>
+<text class="step"  x="720" y="712">8 · REMEMBER</text>
+<text class="title" x="720" y="736">So the next identical ask is a lookup, not a search</text>
+<text class="mod"   x="720" y="756">profiles/store.py · reporting.py</text>
+<text class="body"  x="720" y="772">profile keyed on fingerprint + task + priority · exported to results/</text>
+
+<path class="edge-accent" d="M 966 780 L 966 802" marker-end="url(#arrow-accent)"/>
+
+<!-- OUTPUT -->
+<rect class="pill" x="700" y="804" width="532" height="42" rx="21"/>
+<text class="pill-text" x="966" y="831" text-anchor="middle">READY — a configuration with its evidence attached</text>
+
+<!-- ============ PROFILE HIT BYPASS ============ -->
+<path class="edge-accent" d="M 48 396 L 26 396 L 26 866 L 690 866 L 690 825 L 694 825" marker-end="url(#arrow-accent)"/>
+<text class="lbl-accent" x="120" y="859">PROFILE HIT — everything between is skipped</text>
+
+</svg>

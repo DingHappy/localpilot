@@ -1,0 +1,170 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 764" width="1280" height="764" role="img" aria-label="Two charts comparing memory footprint and decode-speed ceiling for five checkpoints on a 128 GB unified-memory machine">
+<title>Why this platform inverts the usual advice</title>
+<desc>Left chart: total resident memory for five checkpoints against a 128 GB unified pool and a 102.4 GB safe budget; the 550B checkpoint needs 348 GB and does not fit. Right chart: the decode-speed ceiling for the same five, in the same row order, showing that speed does not follow size — a 30B model with 3B active parameters reaches 121 tokens per second while a dense 4B reaches 26.</desc>
+
+<style>
+  .page  { fill: #ffffff; }
+  .panel { fill: #f6f8f5; stroke: #d5ded4; stroke-width: 1.5; }
+  .band  { fill: #f9faf8; stroke: #e2e8e1; stroke-width: 1.2; }
+
+  /* categorical slots 1 and 2, in fixed order; colour encodes weight
+     precision, which is the attribute the figure is about. Validated
+     all-pairs on this surface: CVD dE 24.7, normal-vision dE 33.6. */
+  .s-nvfp4 { fill: #2a78d6; }
+  .s-bf16  { fill: #eb6834; }
+  .s-over  { fill: #2a78d6; opacity: .28; }
+  .sw-nvfp4 { fill: #2a78d6; }
+  .sw-bf16  { fill: #eb6834; }
+
+  .grid     { stroke: #e1e0d9; stroke-width: 1; }
+  .baseline { stroke: #c3c2b7; stroke-width: 1.2; }
+  .budget   { stroke: #52514e; stroke-width: 1.5; }
+  .tear     { stroke: #f6f8f5; stroke-width: 2.5; fill: none; }
+
+  text { font-family: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; }
+  .h1   { font-size: 25px; font-weight: 700; fill: #0b0b0b; }
+  .h2   { font-size: 14px; fill: #52514e; }
+  .eyebrow { font-size: 11px; font-weight: 700; fill: #898781; letter-spacing: .12em; }
+  .ptitle  { font-size: 16px; font-weight: 650; fill: #0b0b0b; }
+  .pnote   { font-size: 12px; fill: #52514e; }
+  .rowname { font-size: 13px; font-weight: 600; fill: #0b0b0b; }
+  .rowmeta { font-size: 11.5px; fill: #898781; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .value   { font-size: 13px; font-weight: 650; fill: #0b0b0b; font-variant-numeric: tabular-nums; }
+  .tick    { font-size: 11.5px; fill: #898781; font-variant-numeric: tabular-nums; }
+  .axis    { font-size: 11.5px; fill: #898781; }
+  .lgd     { font-size: 12.5px; fill: #52514e; }
+  .flag    { font-size: 12px; font-weight: 650; fill: #52514e; }
+  .take    { font-size: 13px; fill: #0b0b0b; }
+  .takenum { font-size: 13px; font-weight: 700; fill: #0b0b0b; }
+  .src     { font-size: 11.5px; fill: #898781; }
+</style>
+
+<rect class="page" x="0" y="0" width="1280" height="764"/>
+
+<text class="h1" x="48" y="48">Why this platform inverts the usual advice</text>
+<text class="h2" x="48" y="74">Capacity is charged on <tspan font-weight="700">total</tspan> parameters. Decode speed is charged only on the <tspan font-weight="700">active</tspan> ones.</text>
+<text class="h2" x="48" y="93">Rows are in the same order in both charts — sorted by memory. Speed does not follow.</text>
+
+<!-- legend -->
+<rect class="sw-nvfp4" x="48" y="110" width="12" height="12" rx="2"/>
+<text class="lgd" x="68" y="120">NVFP4</text>
+<rect class="sw-bf16" x="140" y="110" width="12" height="12" rx="2"/>
+<text class="lgd" x="160" y="120">BF16</text>
+<text class="lgd" x="216" y="120">— colour is the weight precision</text>
+
+<!-- ===================== LEFT: CAPACITY ===================== -->
+<rect class="panel" x="48" y="140" width="580" height="496" rx="9"/>
+<text class="eyebrow" x="68" y="170">CAPACITY</text>
+<text class="ptitle"  x="68" y="196">What fits in one 128 GB unified pool</text>
+<text class="pnote"   x="68" y="216">Weights + KV cache at 8K + activation overhead, in GB</text>
+
+<!-- gridlines -->
+<line class="grid" x1="68"  y1="230" x2="68"  y2="600"/>
+<line class="grid" x1="201" y1="230" x2="201" y2="600"/>
+<line class="grid" x1="334" y1="230" x2="334" y2="600"/>
+<line class="grid" x1="467" y1="230" x2="467" y2="600"/>
+<line class="grid" x1="600" y1="230" x2="600" y2="600"/>
+<line class="baseline" x1="68" y1="600" x2="600" y2="600"/>
+<text class="tick" x="68"  y="616" text-anchor="middle">0</text>
+<text class="tick" x="201" y="616" text-anchor="middle">32</text>
+<text class="tick" x="334" y="616" text-anchor="middle">64</text>
+<text class="tick" x="467" y="616" text-anchor="middle">96</text>
+<text class="tick" x="600" y="616" text-anchor="middle">128</text>
+
+<!-- safe budget threshold -->
+<line class="budget" x1="493" y1="226" x2="493" y2="600"/>
+<text class="flag" x="489" y="220" text-anchor="end">safe budget 102.4 GB</text>
+
+<!-- row 1: 4B dense BF16 -->
+<text class="rowname" x="68" y="250">Nemotron-3-Nano-4B</text>
+<text class="rowmeta" x="68" y="266">4B dense · BF16</text>
+<path class="s-bf16" d="M 68 272 L 98 272 Q 102 272 102 276 L 102 288 Q 102 292 98 292 L 68 292 Z"/>
+<text class="value" x="112" y="287">9.1</text>
+
+<!-- row 2: 30B/3B NVFP4 -->
+<text class="rowname" x="68" y="324">Nemotron-3.5-Lightning-30B-A3B</text>
+<text class="rowmeta" x="68" y="340">30B total / 3B active · NVFP4</text>
+<path class="s-nvfp4" d="M 68 346 L 154 346 Q 158 346 158 350 L 158 362 Q 158 366 154 366 L 68 366 Z"/>
+<text class="value" x="168" y="361">21.7</text>
+
+<!-- row 3: same model, BF16 -->
+<text class="rowname" x="68" y="398">Nemotron-3.5-Lightning-30B-A3B</text>
+<text class="rowmeta" x="68" y="414">30B total / 3B active · BF16 — the same weights</text>
+<path class="s-bf16" d="M 68 420 L 334 420 Q 338 420 338 424 L 338 436 Q 338 440 334 440 L 68 440 Z"/>
+<text class="value" x="348" y="435">65.1</text>
+
+<!-- row 4: 120B/12B NVFP4 -->
+<text class="rowname" x="68" y="472">Nemotron-3-Super-120B-A12B</text>
+<text class="rowmeta" x="68" y="488">120B total / 12B active · NVFP4</text>
+<path class="s-nvfp4" d="M 68 494 L 394 494 Q 398 494 398 498 L 398 510 Q 398 514 394 514 L 68 514 Z"/>
+<text class="value" x="408" y="509">79.5</text>
+
+<!-- row 5: 550B/55B NVFP4 — overflows -->
+<text class="rowname" x="68" y="546">Nemotron-3-Ultra-550B-A55B</text>
+<text class="rowmeta" x="68" y="562">550B total / 55B active · NVFP4 · <tspan fill="#52514e" font-weight="700">348 GB, does not fit</tspan></text>
+<rect class="s-nvfp4" x="68" y="568" width="425" height="20"/>
+<rect class="s-over"  x="495" y="568" width="105" height="20"/>
+<path class="tear" d="M 600 568 L 592 573 L 600 578 L 592 583 L 600 588"/>
+
+<!-- ===================== RIGHT: SPEED ===================== -->
+<rect class="panel" x="652" y="140" width="580" height="496" rx="9"/>
+<text class="eyebrow" x="672" y="170">SPEED</text>
+<text class="ptitle"  x="672" y="196">What one token costs to read</text>
+<text class="pnote"   x="672" y="216">Ceiling = 273 GB/s × 75% ÷ (active params × bytes per param), tok/s</text>
+
+<line class="grid" x1="672"  y1="230" x2="672"  y2="600"/>
+<line class="grid" x1="805"  y1="230" x2="805"  y2="600"/>
+<line class="grid" x1="938"  y1="230" x2="938"  y2="600"/>
+<line class="grid" x1="1071" y1="230" x2="1071" y2="600"/>
+<line class="grid" x1="1204" y1="230" x2="1204" y2="600"/>
+<line class="baseline" x1="672" y1="600" x2="1204" y2="600"/>
+<text class="tick" x="672"  y="616" text-anchor="middle">0</text>
+<text class="tick" x="805"  y="616" text-anchor="middle">32</text>
+<text class="tick" x="938"  y="616" text-anchor="middle">64</text>
+<text class="tick" x="1071" y="616" text-anchor="middle">96</text>
+<text class="tick" x="1204" y="616" text-anchor="middle">128</text>
+
+<!-- row 1: 4B dense BF16 -> 26 -->
+<text class="rowname" x="672" y="250">Nemotron-3-Nano-4B</text>
+<text class="rowmeta" x="672" y="266">reads 4B × 2.0 bytes per token</text>
+<path class="s-bf16" d="M 672 272 L 776 272 Q 780 272 780 276 L 780 288 Q 780 292 776 292 L 672 292 Z"/>
+<text class="value" x="790" y="287">26</text>
+
+<!-- row 2: 30B/3B NVFP4 -> 121 -->
+<text class="rowname" x="672" y="324">Nemotron-3.5-Lightning-30B-A3B</text>
+<text class="rowmeta" x="672" y="340">reads 3B × 0.5625 bytes per token</text>
+<path class="s-nvfp4" d="M 672 346 L 1171 346 Q 1175 346 1175 350 L 1175 362 Q 1175 366 1171 366 L 672 366 Z"/>
+<text class="value" x="1185" y="361">121</text>
+
+<!-- row 3: same model BF16 -> 34 -->
+<text class="rowname" x="672" y="398">Nemotron-3.5-Lightning-30B-A3B</text>
+<text class="rowmeta" x="672" y="414">reads 3B × 2.0 bytes per token</text>
+<path class="s-bf16" d="M 672 420 L 809 420 Q 813 420 813 424 L 813 436 Q 813 440 809 440 L 672 440 Z"/>
+<text class="value" x="823" y="435">34</text>
+
+<!-- row 4: 120B/12B NVFP4 -> 30 -->
+<text class="rowname" x="672" y="472">Nemotron-3-Super-120B-A12B</text>
+<text class="rowmeta" x="672" y="488">reads 12B × 0.5625 bytes per token</text>
+<path class="s-nvfp4" d="M 672 494 L 793 494 Q 797 494 797 498 L 797 510 Q 797 514 793 514 L 672 514 Z"/>
+<text class="value" x="807" y="509">30</text>
+
+<!-- row 5: 550B/55B NVFP4 -> 7 -->
+<text class="rowname" x="672" y="546">Nemotron-3-Ultra-550B-A55B</text>
+<text class="rowmeta" x="672" y="562">reads 55B × 0.5625 bytes per token</text>
+<path class="s-nvfp4" d="M 672 568 L 697 568 Q 701 568 701 572 L 701 584 Q 701 588 697 588 L 672 588 Z"/>
+<text class="value" x="711" y="583">7</text>
+
+<!-- ===================== TAKEAWAYS ===================== -->
+<rect class="band" x="48" y="662" width="1184" height="56" rx="9"/>
+<text class="takenum" x="68" y="687">4.6×</text>
+<text class="take"    x="68" y="706">a 30B/3B model over a dense 4B</text>
+<line class="grid" x1="360" y1="676" x2="360" y2="704"/>
+<text class="takenum" x="384" y="687">3.6×</text>
+<text class="take"    x="384" y="706">NVFP4 over BF16, identical weights</text>
+<line class="grid" x1="740" y1="676" x2="740" y2="704"/>
+<text class="takenum" x="764" y="687">The largest model is both the one that cannot fit</text>
+<text class="take"    x="764" y="706">and the slowest — size buys neither capacity headroom nor speed.</text>
+
+<text class="src" x="48" y="744">Memory from `localpilot registry`: checkpoint sizes summed from Hugging Face file trees, KV computed from config.json. Speed is a bandwidth ceiling from published DGX Spark figures — a modelled upper bound, not a benchmark result.</text>
+
+</svg>

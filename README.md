@@ -45,6 +45,8 @@ nemotron-3-ultra-550b-a55b-nvfp4           550B/55B  NVFP4   328.1G       7  NO
 The 4B dense model is the slowest thing that fits. That is the platform, and
 it is why guessing does not work.
 
+![Capacity is charged on total parameters; decode speed only on the active ones](docs/architecture-platform.svg)
+
 ## What LocalPilot does
 
 ```
@@ -54,6 +56,8 @@ Understand → Inspect → Plan → Execute → Measure → Grade → Rank → R
 Three agents with deliberately separated authority. The planner may propose
 but never measure. The bench agent may measure but never grade quality. The
 judge may grade quality but never rank. Nothing marks its own homework.
+
+![The autopilot loop, and the profile-hit path that skips it](docs/architecture-loop.svg)
 
 ```
 $ localpilot autopilot "帮我部署一个完全本地运行的代码审查 AI，代码不能离开这台电脑，响应速度优先"
@@ -176,6 +180,8 @@ the candidates against each other, grade output quality against a rubric,
 rank under an explicit priority policy, and persist the winner so the next run
 is a lookup.
 
+![LocalPilot as the decision and memory layer above NVIDIA's per-task skills](docs/architecture-skill.svg)
+
 ## Architecture
 
 ```
@@ -193,6 +199,10 @@ localpilot/
   profiles/      profile memory keyed on a hardware fingerprint
   api/           dashboard, jobs, OpenAI-compatible endpoints
   web/           the dashboard, no external assets
+docs/
+  architecture-loop.svg      the loop, and the path that skips it
+  architecture-platform.svg  why capacity and speed come apart here
+  architecture-skill.svg     where this skill sits in the ecosystem
 config/
   models.yaml    checkpoints, with provenance for every number
   engines.yaml   engines, knobs, launch templates

@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 700" width="1280" height="700" role="img" aria-label="Layer diagram showing LocalPilot as the decision and memory layer above NVIDIA's per-task skills and the inference engines">
+<title>Where this skill sits</title>
+<desc>A natural-language ask enters the local-ai-autopilot skill, which generates a candidate set, measures the candidates against each other through one protocol, grades their output, ranks them under a stated priority and remembers the winner. It then hands execution detail off to NVIDIA's verified per-task skills and to the inference engines. A side panel explains that the official skills are per-task recipes that answer a question already decided, and lists what this skill deliberately does not do.</desc>
+
+<style>
+  .page   { fill: #ffffff; }
+  .card   { fill: #f6f8f5; stroke: #d5ded4; stroke-width: 1.5; }
+  .card-accent { fill: #f2f8e8; stroke: #a9cc6b; stroke-width: 1.8; }
+  .card-sub    { fill: #ffffff; stroke: #dde5dc; stroke-width: 1.2; }
+  .card-side   { fill: #f9faf8; stroke: #e2e8e1; stroke-width: 1.2; }
+  .pill   { fill: #eef3e6; stroke: #a9cc6b; stroke-width: 1.5; }
+  .chip   { fill: #ffffff; stroke: #d5ded4; stroke-width: 1.2; }
+
+  text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+  .h1   { font-size: 25px; font-weight: 700; fill: #16211a; }
+  .h2   { font-size: 14px; fill: #5d6b60; }
+  .eyebrow { font-size: 11px; font-weight: 700; fill: #76b900; letter-spacing: .12em; }
+  .eyebrow-m { font-size: 11px; font-weight: 700; fill: #898781; letter-spacing: .12em; }
+  .title   { font-size: 16px; font-weight: 650; fill: #16211a; }
+  .stitle  { font-size: 14px; font-weight: 650; fill: #16211a; }
+  .body    { font-size: 12.5px; fill: #3c4a40; }
+  .em      { font-size: 12.5px; font-weight: 650; fill: #16211a; }
+  .mod     { font-size: 11.5px; fill: #7c8a7f; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .ask     { font-size: 14px; font-weight: 600; fill: #16211a; }
+  .num     { font-size: 11px; font-weight: 700; fill: #76b900; }
+  .edge    { stroke: #8fa093; stroke-width: 1.8; fill: none; }
+  .edge-accent { stroke: #76b900; stroke-width: 2.2; fill: none; }
+  .lbl     { font-size: 11.5px; fill: #6b7a6e; }
+  .no      { font-size: 12.5px; fill: #8a6209; }
+</style>
+
+<defs>
+  <marker id="a1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#8fa093"/>
+  </marker>
+  <marker id="a2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#76b900"/>
+  </marker>
+</defs>
+
+<rect class="page" x="0" y="0" width="1280" height="700"/>
+
+<text class="h1" x="48" y="48">Where this skill sits</text>
+<text class="h2" x="48" y="74">LocalPilot is the decision and memory layer. It does not replace NVIDIA's per-task skills — it works out what to ask them for, and keeps the answer.</text>
+
+<!-- ============ THE ASK ============ -->
+<rect class="pill" x="48" y="102" width="792" height="46" rx="23"/>
+<text class="ask" x="444" y="131" text-anchor="middle">“帮我部署一个完全本地运行的代码审查 AI，代码不能离开这台电脑”</text>
+
+<path class="edge-accent" d="M 444 148 L 444 174" marker-end="url(#a2)"/>
+
+<!-- ============ THIS SKILL ============ -->
+<rect class="card-accent" x="48" y="176" width="792" height="286" rx="10"/>
+<text class="eyebrow" x="68" y="202">THIS SKILL</text>
+<text class="mod"     x="152" y="202">integrations/local-ai-autopilot</text>
+<text class="title"   x="68" y="226">Decide · measure · grade · rank · remember</text>
+
+<rect class="card-sub" x="68" y="240" width="752" height="38" rx="7"/>
+<text class="num" x="84" y="264">1</text>
+<text class="em"   x="102" y="264">Generate the candidate set</text>
+<text class="body" x="320" y="264">gates, then engine × precision × KV × context × batch × spec</text>
+
+<rect class="card-sub" x="68" y="284" width="752" height="38" rx="7"/>
+<text class="num" x="84" y="308">2</text>
+<text class="em"   x="102" y="308">Measure them head to head</text>
+<text class="body" x="320" y="308">one wire protocol, so a gap between engines means the engine</text>
+
+<rect class="card-sub" x="68" y="328" width="752" height="38" rx="7"/>
+<text class="num" x="84" y="352">3</text>
+<text class="em"   x="102" y="352">Grade what they produced</text>
+<text class="body" x="320" y="352">a rubric, scored by a separate model — not by the candidate</text>
+
+<rect class="card-sub" x="68" y="372" width="752" height="38" rx="7"/>
+<text class="num" x="84" y="396">4</text>
+<text class="em"   x="102" y="396">Rank under a stated priority</text>
+<text class="body" x="320" y="396">quality and stability gates first, then that priority's weights</text>
+
+<rect class="card-sub" x="68" y="416" width="752" height="38" rx="7"/>
+<text class="num" x="84" y="440">5</text>
+<text class="em"   x="102" y="440">Remember the winner</text>
+<text class="body" x="320" y="440">keyed on hardware fingerprint + task + priority, so it is reused</text>
+
+<path class="edge" d="M 444 462 L 444 492" marker-end="url(#a1)"/>
+<text class="lbl" x="458" y="482">hands the execution detail off</text>
+
+<!-- ============ WHAT IT DELEGATES TO ============ -->
+<rect class="card" x="48" y="494" width="384" height="160" rx="10"/>
+<text class="eyebrow-m" x="68" y="518">NVIDIA'S VERIFIED SKILLS</text>
+<text class="body" x="68" y="540">Serving recipes, routing and triage:</text>
+<rect class="chip" x="68" y="550" width="180" height="26" rx="6"/>
+<text class="mod" x="78" y="567">dynamo-router-starter</text>
+<rect class="chip" x="256" y="550" width="164" height="26" rx="6"/>
+<text class="mod" x="266" y="567">dynamo-recipe-runner</text>
+<rect class="chip" x="68" y="582" width="164" height="26" rx="6"/>
+<text class="mod" x="78" y="599">dynamo-troubleshoot</text>
+<rect class="chip" x="240" y="582" width="120" height="26" rx="6"/>
+<text class="mod" x="250" y="599">jetson-*</text>
+<text class="body" x="68" y="630">An engine that fails outside bounded recovery</text>
+<text class="body" x="68" y="646">is handed to its own troubleshooting skill.</text>
+
+<rect class="card" x="456" y="494" width="384" height="160" rx="10"/>
+<text class="eyebrow-m" x="476" y="518">INFERENCE ENGINES</text>
+<text class="body" x="476" y="540">Measured, never bundled or pinned:</text>
+<rect class="chip" x="476" y="550" width="74" height="26" rx="6"/>
+<text class="mod" x="486" y="567">vLLM</text>
+<rect class="chip" x="558" y="550" width="132" height="26" rx="6"/>
+<text class="mod" x="568" y="567">TensorRT-LLM</text>
+<rect class="chip" x="698" y="550" width="92" height="26" rx="6"/>
+<text class="mod" x="708" y="567">SGLang</text>
+<rect class="chip" x="476" y="582" width="66" height="26" rx="6"/>
+<text class="mod" x="486" y="599">NIM</text>
+<rect class="chip" x="550" y="582" width="110" height="26" rx="6"/>
+<text class="mod" x="560" y="599">llama.cpp</text>
+<text class="body" x="476" y="630">Whichever is already installed. An engine that</text>
+<text class="body" x="476" y="646">was not found is never recommended.</text>
+
+<!-- ============ THE BOUNDARY ============ -->
+<rect class="card-side" x="880" y="102" width="352" height="552" rx="10"/>
+<text class="eyebrow-m" x="900" y="128">THE BOUNDARY</text>
+<text class="stitle" x="900" y="154">Isn't this what the</text>
+<text class="stitle" x="900" y="174">official skills already do?</text>
+
+<text class="body" x="900" y="204">No. Those are per-task recipes: how to</text>
+<text class="body" x="900" y="222">serve, how to benchmark, how to tune</text>
+<text class="body" x="900" y="240">memory on a given target.</text>
+<text class="em"   x="900" y="266">Each answers a question you had</text>
+<text class="em"   x="900" y="284">already decided to ask.</text>
+
+<line x1="900" y1="306" x2="1212" y2="306" stroke="#e2e8e1" stroke-width="1.2"/>
+
+<text class="eyebrow" x="900" y="332">WHAT NONE OF THEM DO</text>
+<text class="body" x="900" y="358">· Work out which configuration to try</text>
+<text class="body" x="900" y="380">· Put the candidates on one yardstick</text>
+<text class="body" x="900" y="402">· Grade the output, not just the speed</text>
+<text class="body" x="900" y="424">· Keep the answer for next time</text>
+
+<line x1="900" y1="450" x2="1212" y2="450" stroke="#e2e8e1" stroke-width="1.2"/>
+
+<text class="eyebrow-m" x="900" y="476">WHAT THIS SKILL WILL NOT DO</text>
+<text class="no" x="900" y="502">· Write serving recipes of its own</text>
+<text class="no" x="900" y="524">· Cover Jetson — that has its own skills</text>
+<text class="no" x="900" y="546">· Improvise a system-level fix</text>
+<text class="no" x="900" y="568">· Download weights without being asked</text>
+
+<line x1="900" y1="594" x2="1212" y2="594" stroke="#e2e8e1" stroke-width="1.2"/>
+<text class="body" x="900" y="620">The composition is the point: this skill</text>
+<text class="body" x="900" y="638">is worth having only because it leaves</text>
+<text class="body" x="900" y="656">the recipes to the skills that own them.</text>
+
+</svg>
