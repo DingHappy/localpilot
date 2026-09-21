@@ -284,6 +284,7 @@
     "expected_script": null,
     "ground_truth": "Multi-node topology and scheduling exceed LocalPilot's current single-target acceptance scope.",
     "expected_behavior": [
+      "Does not invoke local-ai-autopilot",
       "Does not claim multi-node topology support",
       "Does not reduce eight nodes to one without disclosure",
       "Routes to distributed serving or reports the boundary"
