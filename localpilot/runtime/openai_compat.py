@@ -8,7 +8,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from statistics import mean
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -29,6 +29,9 @@ class StreamSample:
     output_tokens: int
     ok: bool
     error: Optional[str] = None
+    answer: str = field(default="", repr=False)
+    finish_reason: Optional[str] = None
+    token_count_source: str = "unknown"
 
     @property
     def decode_ms(self) -> float:
@@ -474,6 +477,9 @@ class OpenAICompatRuntime(RuntimeProvider):
             "temperature": 0.0,
             "stream": stream,
         }
+        if isinstance(prompt, dict) and "response_format" in prompt:
+            # Explicit request strategy only; expected labels never enter the payload.
+            payload["response_format"] = prompt["response_format"]
         if self._engine_id_for(self.candidate) == "ollama":
             payload["reasoning_effort"] = os.environ.get(
                 "LOCALPILOT_OLLAMA_REASONING_EFFORT", "none"
@@ -499,7 +505,11 @@ class OpenAICompatRuntime(RuntimeProvider):
             return ""
         return str(choices[0].get("message", {}).get("content", ""))
 
-    def _stream_once(self, prompt: Any, max_new_tokens: int) -> StreamSample:
+    def measure_response(self, prompt: Any, max_new_tokens: int = 768) -> StreamSample:
+        """Observe one response for paired quality/timing checks; do not log its text."""
+        return self._stream_once(prompt, max_new_tokens, capture_answer=True)
+
+    def _stream_once(self, prompt: Any, max_new_tokens: int, capture_answer: bool = False) -> StreamSample:
         body = json.dumps(self._payload(prompt, max_new_tokens, True)).encode()
         request = urllib.request.Request(
             f"{self.base_url}{self._completions_path()}",
@@ -511,6 +521,8 @@ class OpenAICompatRuntime(RuntimeProvider):
         first_token_at: Optional[float] = None
         delta_count = 0
         reported_tokens: Optional[int] = None
+        pieces = []
+        finish_reason = None
         try:
             with urllib.request.urlopen(request, timeout=600) as response:
                 for raw in response:
@@ -528,11 +540,15 @@ class OpenAICompatRuntime(RuntimeProvider):
                     if isinstance(usage, dict) and usage.get("completion_tokens"):
                         reported_tokens = int(usage["completion_tokens"])
                     for choice in event.get("choices") or []:
+                        if choice.get("finish_reason"):
+                            finish_reason = choice["finish_reason"]
                         content = (choice.get("delta") or {}).get("content")
                         if content:
                             if first_token_at is None:
                                 first_token_at = time.perf_counter()
                             delta_count += 1
+                            if capture_answer:
+                                pieces.append(content)
         except (urllib.error.URLError, OSError, TimeoutError) as exc:
             return StreamSample(0.0, 0.0, 0, False, f"{type(exc).__name__}: {exc}")
 
@@ -553,6 +569,9 @@ class OpenAICompatRuntime(RuntimeProvider):
             total_ms=(finished - started) * 1000,
             output_tokens=tokens,
             ok=True,
+            answer="".join(pieces),
+            finish_reason=finish_reason,
+            token_count_source="engine_usage" if reported_tokens is not None else "sse_frames",
         )
 
     def _stream_concurrent(

@@ -1,0 +1,19 @@
+{
+  "type": "json_schema",
+  "json_schema": {
+    "name": "invoice_fields",
+    "strict": true,
+    "schema": {
+      "type": "object",
+      "properties": {
+        "invoice_number": {"type": "string"},
+        "issue_date": {"type": "string"},
+        "total_usd": {"type": "string"},
+        "seller": {"type": "string"},
+        "purchase_order": {"type": ["string", "null"]}
+      },
+      "required": ["invoice_number", "issue_date", "total_usd", "seller", "purchase_order"],
+      "additionalProperties": false
+    }
+  }
+}
