@@ -158,6 +158,12 @@ def write_json(path: Path, value: Any) -> None:
     )
 
 
+def subprocess_text(value: str | bytes | None) -> str:
+    if isinstance(value, bytes):
+        return value.decode("utf-8", "replace")
+    return value or ""
+
+
 def selected_cases(ids: Iterable[str] | None) -> List[dict]:
     cases = load_json(DATASET)
     selected = set(ids or [])
@@ -266,8 +272,10 @@ def run_agent(base: Path, arm: str, case: dict, timeout: int) -> dict:
         returncode = completed.returncode
         error = None
     except subprocess.TimeoutExpired as exc:
-        events_path.write_text(exc.stdout or "", encoding="utf-8")
-        (artifact / "stderr.txt").write_text(exc.stderr or "", encoding="utf-8")
+        events_path.write_text(subprocess_text(exc.stdout), encoding="utf-8")
+        (artifact / "stderr.txt").write_text(
+            subprocess_text(exc.stderr), encoding="utf-8"
+        )
         status = "timeout"
         returncode = None
         error = f"timeout after {timeout}s"
