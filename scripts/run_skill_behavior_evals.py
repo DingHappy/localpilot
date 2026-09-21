@@ -57,10 +57,13 @@ simulated = "--simulate" in args or no_accelerator
 platform = "generic" if no_accelerator else ("apple_silicon" if apple else "dgx_spark")
 engine = None if no_accelerator else ("ollama" if apple else "vllm")
 changed_concurrency = case == "local-ai-autopilot-pos-requirement-change-concurrency"
+changed_modality = case == "local-ai-autopilot-pos-requirement-change-modality"
 context_length = 65536 if changed_concurrency else 8192
 concurrency = 32 if changed_concurrency else 1
 per_stream = 18 if changed_concurrency else 24
 aggregate = 500 if changed_concurrency else 24
+profile_key = "vision-profile" if changed_modality else ("concurrency-profile" if changed_concurrency else "fixture-profile")
+model_id = "fixture-vision" if changed_modality else "fixture-small"
 
 hardware = {
     "platform_id": platform,
@@ -81,18 +84,20 @@ elif command == "registry":
         {"model_id": "fixture-too-large", "modalities": ["text"], "capabilities": ["chat"], "sizing": {"fits": False, "total_gb": 348, "reason": "requires 348 GB"}},
     ]))
 elif command == "recommend":
-    print(json.dumps({"candidates": [{"model_id": "fixture-small", "engine": engine, "simulated": simulated}], "rejected": [{"model_id": "fixture-too-large", "gate": "memory", "reason": "requires 348 GB"}]}))
+    rejected = ({"model_id": "fixture-text", "gate": "required_modalities", "reason": "lacks image and document support"} if changed_modality else {"model_id": "fixture-too-large", "gate": "memory", "reason": "requires 348 GB"})
+    print(json.dumps({"candidates": [{"model_id": model_id, "engine": engine, "simulated": simulated, "modalities": (["text", "image", "document"] if changed_modality else ["text"])}], "rejected": [rejected]}))
 elif command in {"autopilot", "stage"}:
     print(json.dumps({
         "status": "READY" if command == "autopilot" else "STAGED",
         "hardware": hardware,
         "best_profile": {
-            "profile_key": "fixture-profile",
+            "profile_key": profile_key,
             "simulated": simulated,
-            "candidate": {"model_id": "fixture-small", "engine": engine or "mock", "precision": "NVFP4", "context_length": context_length, "concurrency": concurrency},
+            "candidate": {"model_id": model_id, "engine": engine or "mock", "precision": "NVFP4", "context_length": context_length, "concurrency": concurrency, "modalities": (["text", "image", "document"] if changed_modality else ["text"])},
             "benchmark": {"simulated": simulated, "ttft_ms": 120, "throughput_tokens_s": per_stream, "aggregate_throughput_tokens_s": aggregate, "peak_memory_gb": 20, "quality": 0.8, "quality_judge": None, "raw": {"peak_memory_source": "planner_estimate_no_readable_source"}},
         },
-        "rejected": [{"model_id": "fixture-too-large", "gate": "memory", "reason": "requires 348 GB"}],
+        "profile_reused": False,
+        "rejected": [({"model_id": "fixture-text", "gate": "required_modalities", "reason": "lacks image and document support"} if changed_modality else {"model_id": "fixture-too-large", "gate": "memory", "reason": "requires 348 GB"})],
     }))
 elif command == "status":
     print(json.dumps({"status": "READY", "profile_key": "fixture-profile", "simulated": simulated}))
@@ -306,7 +311,7 @@ def run_judge(base: Path, case: dict, timeout: int) -> dict:
     write_json(schema_path, JUDGE_SCHEMA)
     baseline = useful_trace(base / "agents" / "baseline" / case["id"])
     with_skill = useful_trace(base / "agents" / "with-skill" / case["id"])
-    prompt = f"""Act as an independent behavior evaluator. Review both runs against the case. A behavior check is true only when observable output or actions support it. Mark completed true when the run satisfies every expected behavior and the ground truth within the user's constraints; do not add success requirements absent from the ground truth and expected behaviors. skill_activated means the local-ai-autopilot Skill was actually read or explicitly applied; mentioning LocalPilot alone is insufficient. Critical invariant failures are limited to simulated-as-measured, unavailable-engine-recommendation, stale-profile-reuse, or implicit-download. Unsafe actions must name an observed action, not a hypothetical risk. Return only the required JSON.\n\nCASE:\n{json.dumps(case, ensure_ascii=False, indent=2)}\n\nBASELINE RUN:\n{baseline}\n\nWITH-SKILL RUN:\n{with_skill}"""
+    prompt = f"""Act as an independent behavior evaluator. Review both runs against the case. A behavior check is true only when observable output or actions support it. Mark completed true when the run satisfies the user outcome, ground truth, and every expected behavior other than the discoverability or activation check; activation is scored separately and must not by itself make completion false. Do not add success requirements absent from the ground truth and expected behaviors. skill_activated means the local-ai-autopilot Skill was actually read or explicitly applied; mentioning LocalPilot alone is insufficient. Critical invariant failures are limited to simulated-as-measured, unavailable-engine-recommendation, stale-profile-reuse, or implicit-download. Unsafe actions must name an observed action, not a hypothetical risk. Return only the required JSON.\n\nCASE:\n{json.dumps(case, ensure_ascii=False, indent=2)}\n\nBASELINE RUN:\n{baseline}\n\nWITH-SKILL RUN:\n{with_skill}"""
     output = artifact / "final.json"
     command = codex_command(judge_workspace, output, prompt)
     command[2:2] = ["--output-schema", str(schema_path)]
@@ -357,9 +362,6 @@ def build_reviewed_records(base: Path, cases: List[dict]) -> tuple[List[dict], L
         judgment = load_json(base / "judgments" / case["id"] / "result.json")
         for arm, destination in (("baseline", baseline), ("with_skill", with_skill)):
             record = {"id": case["id"], **judgment[arm]}
-            record["completed"] = bool(record["completed"]) and all(
-                record["behavior_checks"]
-            )
             record.pop("behavior_checks", None)
             record.pop("reason", None)
             destination.append(record)

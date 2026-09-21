@@ -56,6 +56,9 @@ DGX Spark model. Registry otherwise sizes against the detected target.
   `benchmark.simulated` are false.
 - Preserve capacity rejections, gate failures, recovery actions, and the
   exact target that produced the evidence.
+- Reject candidates that lack a required modality or capability; never infer
+  image, document, audio, tool-use, or structured-output support from a model
+  name alone.
 - Invalidate profile reuse when task, privacy, priority, quality, context,
   concurrency, capabilities, modalities, or languages change.
 - A successful candidate merely ran; it wins only after gates and ranking.
