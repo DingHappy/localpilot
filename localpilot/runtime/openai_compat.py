@@ -662,6 +662,9 @@ class OpenAICompatRuntime(RuntimeProvider):
 
         quality_hits = 0
         for prompt in prompts:
+            if "expected_fields" in prompt:
+                # The executor's deterministic evaluator runs this dataset once.
+                continue
             response = self.generate(prompt, max_new_tokens)
             if keyword_hit(response, prompt):
                 quality_hits += 1

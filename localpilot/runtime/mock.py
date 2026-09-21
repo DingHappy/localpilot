@@ -99,7 +99,10 @@ class MockRuntime(RuntimeProvider):
     def generate(self, prompt: Any, max_new_tokens: int = 64) -> str:
         if not self.started:
             raise RuntimeError("Mock runtime is not started")
-        answer = self._canned_answers().get(prompt_text(prompt))
+        # Image tasks can share instructions while carrying different inputs.
+        answer = prompt.get("mock_answer") if isinstance(prompt, dict) else None
+        if not answer:
+            answer = self._canned_answers().get(prompt_text(prompt))
         if answer:
             return answer
         return (

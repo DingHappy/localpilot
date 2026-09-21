@@ -6,6 +6,7 @@ from typing import Callable, List, Optional
 from localpilot.agents.bench_agent import BenchAgent
 from localpilot.agents.judge_agent import JudgeAgent
 from localpilot.agents.planner_agent import PlannerAgent
+from localpilot.benchmark.prompts import load_benchmark_config
 from localpilot.executor.process import runtime_factory
 from localpilot.hardware.profiler import HardwareProfiler
 from localpilot.intent.parser import parse_intent
@@ -35,6 +36,7 @@ def profile_requirements(intent) -> dict:
         "capabilities": sorted(intent.capabilities),
         "modalities": sorted(intent.modalities),
         "languages": sorted(intent.preferred_language),
+        "benchmark_sha256": stable_hash(load_benchmark_config()),
     }
 
 

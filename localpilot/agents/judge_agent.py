@@ -7,7 +7,9 @@ import urllib.request
 from typing import Any, Dict, List, Optional
 
 from localpilot.agents.base import Agent
-from localpilot.benchmark.prompts import keyword_hit, prompts_for_task
+from localpilot.benchmark.prompts import keyword_hit, prompts_for_task, load_benchmark_config
+from localpilot.benchmark.structured import score_fields, summarize_fields
+from localpilot.utils import stable_hash
 from localpilot.planner.policies import PolicyEngine
 from localpilot.runtime.base import RuntimeProvider
 from localpilot.schemas import CandidatePlan
@@ -68,6 +70,11 @@ class JudgeAgent(Agent):
         if not prompts:
             return self._result(None, None, "no benchmark prompts for task")
 
+        if any("expected_fields" in prompt for prompt in prompts):
+            if not all(prompt.get("expected_fields") for prompt in prompts):
+                raise ValueError("Do not mix structured fields and keyword-only prompts in one task")
+            return self._evaluate_fields(runtime, prompts)
+
         samples = []
         keyword_hits = 0
         for prompt in prompts:
@@ -96,7 +103,7 @@ class JudgeAgent(Agent):
             )
 
         graded = [item for item in samples if "answer" in item]
-        keyword_quality = keyword_hits / max(1, len(graded)) if graded else 0.0
+        keyword_quality = keyword_hits / max(1, len(prompts))
 
         if not self.config.get("enabled", False):
             return self._result(
@@ -155,6 +162,32 @@ class JudgeAgent(Agent):
         )
 
     # ------------------------------------------------------------------
+
+    def _evaluate_fields(self, runtime, prompts):
+        samples = []
+        config = load_benchmark_config()
+        for prompt in prompts:
+            error = None
+            try:
+                answer = runtime.generate(prompt, max_new_tokens=int(config.get("max_new_tokens", 768)))
+            except Exception as exc:
+                answer = ""
+                error = type(exc).__name__
+            sample = score_fields(answer, prompt["expected_fields"])
+            sample["prompt_id"] = prompt.get("id")
+            if error:
+                sample["error"] = error
+            # Store verdicts, never the document text or model answer.
+            samples.append(sample)
+        summary = summarize_fields(samples)
+        summary["dataset_sha256"] = stable_hash(prompts)
+        self.record("grade_fields", detail="Deterministic JSON field acceptance", data=summary)
+        return {
+            "keyword": None, "judge": None,
+            "blended": summary["document_accuracy"],
+            "detail": "Exact JSON document match; not a semantic judge score",
+            "structured": summary, "samples": samples,
+        }
 
     def _prompt_text(self, prompts: List[Dict[str, Any]], prompt_id: Any) -> str:
         for prompt in prompts:

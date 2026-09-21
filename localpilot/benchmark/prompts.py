@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 from typing import Any, Dict, List
 
 from localpilot.utils import config_file, load_data_file
@@ -10,7 +11,8 @@ FALLBACK_TASK = "chat"
 
 
 def load_benchmark_config(path: Path = None) -> Dict[str, Any]:
-    target = path or config_file("benchmark.yaml")
+    override = os.environ.get("LOCALPILOT_BENCHMARK_CONFIG")
+    target = path or (Path(override).expanduser() if override else config_file("benchmark.yaml"))
     return load_data_file(target)
 
 

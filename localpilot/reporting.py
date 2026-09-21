@@ -215,7 +215,28 @@ def render_markdown(run: Dict[str, Any]) -> str:
     lines.append(_table(detail, ["field", "value"]))
     lines.append("")
 
-    if benchmark.get("quality_judge") is None:
+    structured = (benchmark.get("raw") or {}).get("structured_quality")
+    if structured:
+        lines.append("## Document field acceptance")
+        lines.append("")
+        lines.append(_table([
+            ["Documents", str(structured["documents"])],
+            ["Fields correct / total", f"{structured['fields_correct']} / {structured['fields_total']}"],
+            ["Field exact match", _number(structured["field_accuracy"], 3)],
+            ["Document exact match", _number(structured["document_accuracy"], 3)],
+            ["Valid JSON rate", _number(structured["json_valid_rate"], 3)],
+            ["Request failures", str(structured["request_failures"])],
+            ["Dataset SHA256", structured["dataset_sha256"]],
+        ], ["metric", "value"]))
+        lines.append("")
+        lines.append("Quality uses exact JSON document matching against fixed labels. "
+                     "Failed requests count as incorrect. This is dataset-specific "
+                     "field evidence, not an independent semantic judge score.")
+        lines.append("Reproduction requires the same benchmark configuration: set "
+                     "`LOCALPILOT_BENCHMARK_CONFIG` to its path before running the "
+                     "command below. The full config hash is recorded in the raw JSON.")
+        lines.append("")
+    elif benchmark.get("quality_judge") is None:
         lines.append("Quality is the keyword signal alone: no judge model was "
                      "reachable, so the figure is weak and is reported as such.")
         lines.append("")

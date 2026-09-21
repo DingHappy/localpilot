@@ -128,10 +128,12 @@ class Executor:
         benchmark.raw = dict(benchmark.raw or {})
         benchmark.raw["quality_detail"] = evaluation.get("detail")
         benchmark.raw["quality_samples"] = evaluation.get("samples", [])
+        if evaluation.get("structured") is not None:
+            benchmark.raw["structured_quality"] = evaluation["structured"]
         steps.append(
             StepStatus(
                 "quality_grading",
-                "success" if evaluation.get("judge") is not None else "degraded",
+                "success" if evaluation.get("judge") is not None or evaluation.get("structured") is not None else "degraded",
                 str(evaluation.get("detail", "")),
             )
         )
