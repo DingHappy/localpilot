@@ -290,6 +290,12 @@ The filename carries `-real-` or `-sim-`, the report states the label above
 the numbers, and every comparison in it names the axes on which the pair
 differed.
 
+The latest committed DGX Spark vision evidence is
+[`results/20260921T124614-real-vision-quality.md`](results/20260921T124614-real-vision-quality.md).
+It records three real image requests and an all-fields match on a deterministic
+three-color image. This validates the image request path; it does not establish
+invoice OCR accuracy or a comparison between models.
+
 ## How the measurement is taken
 
 Details that decide whether the numbers mean anything:

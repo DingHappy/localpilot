@@ -109,19 +109,27 @@ Skill 的核心作用是：
 
 最后一项体现了项目的重要原则：**不使用 Agent 推理代替可以获得的真实测量，也不把同一服务伪装成多个不同配置进行比较。**
 
+2026-09-21 又完成了真实图片输入验收。LocalPilot 通过 DGX Spark 上已有的
+vLLM 服务向 Step3-VL-10B-FP8 发送一张内嵌合成测试图，连续完成 3 次图片请求。
+模型正确识别了左侧红色、右侧蓝色和中心绿色，三个预期字段必须全部命中才算通过。
+本次实测 TTFT 为 98.76 ms，单流解码为 20.19 tok/s，报告记录的峰值内存为
+55.04 GB，来源是引擎报告的权重与已分配 KV 内存。
+
 ## 4. 当前不能过度声称的能力
 
-### 4.1 还没有证明真实视觉验收
+### 4.1 已证明图片链路，尚未证明真实文档业务效果
 
-最新报告的目标是本地发票图片理解，但实际基准请求只是让模型用文字描述服务器机架可能包含什么，没有发送图片，也没有测试 OCR 或发票字段。
+最新报告已经证明图片被实际组装进 OpenAI 兼容请求，并在 DGX Spark 上完成
+3 次非模拟测量。合成测试图的红、蓝、绿三个确定性字段全部命中，说明从
+LocalPilot 基准集、请求构造到视觉模型响应的图片链路已经跑通。
 
-因此当前能够证明的是“真实文本请求经过了视觉模型服务”，不能证明：
+这仍不能证明：
 
-- 图片确实被输入；
-- 发票 OCR 可用；
-- 字段提取准确；
-- 图片没有离开设备；
-- 视觉候选之间完成了有效比较。
+- 发票 OCR 或复杂文档理解可用；
+- 发票号码、金额、日期等业务字段达到目标准确率；
+- `local_only` 已由网络策略强制执行，而不只是本次使用回环端点；
+- 多个视觉候选之间完成了有效比较；
+- 没有独立 Judge 时，开放式视觉回答具备可靠质量。
 
 ### 4.2 还没有证明多候选优化
 
@@ -376,7 +384,7 @@ Planner、Bench、Judge 的职责划分是合理架构，但 Agent 数量本身�
 1. 修复 `localpilot/models` 被 Git 忽略的问题；
 2. 把运行所需配置正确打包；
 3. 完成全新目录的克隆、安装和启动验收；
-4. 视觉任务真正发送图片并使用确定性字段指标；
+4. ~~视觉任务真正发送图片并使用确定性字段指标；~~ 已用三色合成图完成真实链路验收，下一步升级为合成发票字段集；
 5. 把状态拆分为 `MEASURED`、`SELECTED`、`DEPLOYED`、`READY`；
 6. 获胜配置部署后保持服务在线，并进行真实 API 验收；
 7. 为 Profile 加入需求和环境指纹；
@@ -441,7 +449,9 @@ Planner、Bench、Judge 的职责划分是合理架构，但 Agent 数量本身�
 
 - LocalPilot Skill：[`SKILL.md`](../.agents/skills/local-ai-autopilot/SKILL.md)
 - CLI 合约：[`cli.md`](../.agents/skills/local-ai-autopilot/references/cli.md)
-- 最新真实报告：[`results/20260920T170725-real-vision-balanced.md`](../results/20260920T170725-real-vision-balanced.md)
+- 最新真实视觉报告：[`results/20260921T124614-real-vision-quality.md`](../results/20260921T124614-real-vision-quality.md)
+- 真实视觉验收说明：[`results/20260921-real-vision-validation.md`](../results/20260921-real-vision-validation.md)
+- 早期真实文本链路报告：[`results/20260920T170725-real-vision-balanced.md`](../results/20260920T170725-real-vision-balanced.md)
 - NVIDIA DGX Spark 硬件说明：[docs.nvidia.com/dgx/dgx-spark/hardware.html](https://docs.nvidia.com/dgx/dgx-spark/hardware.html)
 - NVIDIA Local AI：[developer.nvidia.com/topics/ai/local-ai](https://developer.nvidia.com/topics/ai/local-ai)
 - NVIDIA Skills：[github.com/NVIDIA/skills](https://github.com/NVIDIA/skills)

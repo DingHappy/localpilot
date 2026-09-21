@@ -1,0 +1,664 @@
+{
+  "agent_trace": [
+    {
+      "action": "read_hardware",
+      "agent": "planner",
+      "data": {
+        "engines_available": [
+          "ollama",
+          "vllm"
+        ],
+        "platform_id": "dgx_spark",
+        "simulated": false,
+        "unified_memory": true
+      },
+      "detail": "dgx_spark: 119.7 GB unified, 273 GB/s",
+      "status": "success"
+    },
+    {
+      "action": "restrict_to_served",
+      "agent": "planner",
+      "data": {
+        "dropped": [
+          "qwen3.8-27b-mlx",
+          "step-3.7-flash-nvfp4",
+          "nemotron-nano-12b-v2-vl-fp8"
+        ],
+        "kept": [
+          "step3-vl-10b-fp8"
+        ],
+        "served": [
+          "step3-vl-10b-fp8"
+        ]
+      },
+      "detail": "Attached to a server already running ['step3-vl-10b-fp8'], so the plan can only measure that. Dropped 3 model(s) this server cannot answer for: qwen3.8-27b-mlx, step-3.7-flash-nvfp4, nemotron-nano-12b-v2-vl-fp8. Comparing across models needs one server per model.",
+      "status": "degraded"
+    },
+    {
+      "action": "reconcile_with_server",
+      "agent": "planner",
+      "data": {
+        "adopted": [
+          "step3-vl-10b-fp8-vllm-fp8: utilization 0.7 -> 0.5",
+          "step3-vl-10b-fp8-vllm-fp8-kvfp8: utilization 0.7 -> 0.5"
+        ],
+        "kept": [
+          "step3-vl-10b-fp8-vllm-fp8"
+        ],
+        "rejected": [
+          {
+            "candidate_id": "step3-vl-10b-fp8-vllm-fp8-kvfp8",
+            "mismatches": [
+              "KV cache dtype declared fp8, server runs auto"
+            ]
+          }
+        ],
+        "server": {
+          "base_url": "http://127.0.0.1:8000",
+          "block_size": 16,
+          "cache_dtype": "auto",
+          "gpu_memory_utilization": 0.5,
+          "introspected": true,
+          "kv_capacity_tokens": 298608,
+          "max_model_len": 8192,
+          "num_gpu_blocks": 18663,
+          "prefix_cache_hit_rate": 0.6656,
+          "served_models": [
+            "step3-vl-10b-fp8"
+          ]
+        }
+      },
+      "detail": "The attached server runs one configuration (kv=auto, util=0.5, max_len=8192), so 1 candidate(s) whose knobs differ were dropped rather than measured under a label they do not match: step3-vl-10b-fp8-vllm-fp8-kvfp8 [KV cache dtype declared fp8, server runs auto]",
+      "status": "degraded"
+    },
+    {
+      "action": "adopt_server_knobs",
+      "agent": "planner",
+      "data": {
+        "adopted": [
+          "step3-vl-10b-fp8-vllm-fp8: utilization 0.7 -> 0.5",
+          "step3-vl-10b-fp8-vllm-fp8-kvfp8: utilization 0.7 -> 0.5"
+        ]
+      },
+      "detail": "Adopted the server's own setting rather than measuring under a label it does not match: step3-vl-10b-fp8-vllm-fp8: utilization 0.7 -> 0.5; step3-vl-10b-fp8-vllm-fp8-kvfp8: utilization 0.7 -> 0.5",
+      "status": "degraded"
+    },
+    {
+      "action": "propose_candidate",
+      "agent": "planner",
+      "data": {
+        "candidate_id": "step3-vl-10b-fp8-vllm-fp8",
+        "concurrency": 1,
+        "context_length": 8192,
+        "engine": "vllm",
+        "expected_memory_gb": 16.66,
+        "precision": "FP8",
+        "roofline_decode_tokens_s": 20.5,
+        "speculative_decoding": false
+      },
+      "detail": "vLLM ranks #1 for quality; 16.7 GB of a 83.8 GB budget",
+      "status": "success"
+    },
+    {
+      "action": "plan_complete",
+      "agent": "planner",
+      "data": {},
+      "detail": "1 candidates across 1 models and 1 engines",
+      "status": "success"
+    },
+    {
+      "action": "judge_unavailable",
+      "agent": "judge",
+      "data": {},
+      "detail": "No judge model answered; the keyword score stands alone and the profile records that.",
+      "status": "degraded"
+    },
+    {
+      "action": "measure_candidate",
+      "agent": "bench",
+      "data": {
+        "aggregate_throughput_tokens_s": 19.96,
+        "candidate_id": "step3-vl-10b-fp8-vllm-fp8",
+        "peak_memory_gb": 55.04,
+        "peak_memory_source": "engine_reported_weights_plus_allocated_kv",
+        "quality": 1.0,
+        "simulated": false,
+        "throughput_tokens_s": 20.19,
+        "ttft_ms": 98.76
+      },
+      "detail": "step3-vl-10b-fp8-vllm-fp8: TTFT 99 ms, 20.2 tok/s/stream, 55.0 GB peak memory, 20.0 tok/s aggregate",
+      "status": "success"
+    },
+    {
+      "action": "rank_candidates",
+      "agent": "optimizer",
+      "data": {
+        "components": {
+          "latency": 0.0,
+          "memory": 0.0,
+          "quality": 1.0,
+          "stability": 1.0,
+          "throughput": 1.0
+        },
+        "ranking": [
+          {
+            "candidate_id": "step3-vl-10b-fp8-vllm-fp8",
+            "gate_failures": [],
+            "score": 75.0
+          }
+        ],
+        "score": 75.0,
+        "winner": "step3-vl-10b-fp8-vllm-fp8"
+      },
+      "detail": "step3-vl-10b-fp8-vllm-fp8 wins with 75.00/100 under priority 'quality'",
+      "status": "success"
+    },
+    {
+      "action": "save_profile",
+      "agent": "memory",
+      "data": {
+        "profile_key": "a506407d532b51766175"
+      },
+      "detail": "Profile a506407d532b51766175 activated for vision/quality on this fingerprint",
+      "status": "success"
+    }
+  ],
+  "best_profile": {
+    "benchmark": {
+      "aggregate_throughput_tokens_s": 19.96,
+      "bandwidth_utilization": null,
+      "concurrency": 1,
+      "cpu_usage_percent": 2.0,
+      "decode_bandwidth_gbps": null,
+      "peak_memory_gb": 55.04,
+      "quality": 1.0,
+      "quality_judge": null,
+      "quality_keyword": 1.0,
+      "raw": {
+        "base_url": "http://127.0.0.1:8000",
+        "distinct_prompts": 3,
+        "engine": "vllm",
+        "engine_memory": {
+          "kv_allocated_gb": 41.01,
+          "server": {
+            "base_url": "http://127.0.0.1:8000",
+            "block_size": 16,
+            "cache_dtype": "auto",
+            "gpu_memory_utilization": 0.5,
+            "introspected": true,
+            "kv_capacity_tokens": 298608,
+            "max_model_len": 8192,
+            "num_gpu_blocks": 18663,
+            "prefix_cache_hit_rate": 0.6928,
+            "served_models": [
+              "step3-vl-10b-fp8"
+            ]
+          },
+          "total_gb": 55.04,
+          "weights_gb": 14.03
+        },
+        "image_prompt_ids": [
+          "vision-three-colors"
+        ],
+        "image_requests_measured": 3,
+        "launch_command": null,
+        "managed_by_localpilot": false,
+        "memory_attributable_gb": 0.0,
+        "memory_baseline_gb": 64.82,
+        "output_tokens_total": 260,
+        "peak_memory_source": "engine_reported_weights_plus_allocated_kv",
+        "quality_detail": "judge model unavailable",
+        "quality_samples": [
+          {
+            "answer": "用户现在需要分析图片中的颜色。首先看左边，是红色（red）；右边是蓝色（blue）；中间小正方形是绿色（green）。要确认每个部分的颜色。左边红色，右边蓝色，中间绿色正方形。需要准确描述每个部分。\n</think>\nThe color on the left is red, the color on the right is blue, and the color of the small center square is green.",
+            "expected_terms": [
+              "red",
+              "blue",
+              "green"
+            ],
+            "keyword_hit": true,
+            "prompt_id": "vision-three-colors"
+          }
+        ],
+        "requests": 3
+      },
+      "runs": 3,
+      "simulated": false,
+      "stability": 1.0,
+      "throughput_tokens_s": 20.19,
+      "total_latency_ms": 4341.15,
+      "tpot_ms": 49.52,
+      "ttft_ms": 98.76,
+      "ttft_p95_ms": 98.99,
+      "warmup_runs": 1
+    },
+    "candidate": {
+      "active_parameter_count_b": 10.0,
+      "candidate_id": "step3-vl-10b-fp8-vllm-fp8",
+      "concurrency": 1,
+      "confidence": 0.85,
+      "context_length": 8192,
+      "device": "CUDA",
+      "engine": "vllm",
+      "expected_memory_gb": 16.66,
+      "fallback_of": null,
+      "knobs": {
+        "concurrency": 1,
+        "enable_prefix_caching": true,
+        "gpu_memory_utilization": 0.5,
+        "kv_cache_dtype": "auto",
+        "max_num_seqs": 1,
+        "num_speculative_tokens": 3,
+        "speculative_decoding": false
+      },
+      "kv_cache_dtype": "auto",
+      "memory_estimate": {
+        "activation_overhead_gb": 1.5,
+        "budget_gb": 83.79,
+        "detail": "16.7 GB of a 83.8 GB budget",
+        "fits": true,
+        "kv_cache_gb": 1.12,
+        "total_gb": 16.66,
+        "weights_gb": 14.03
+      },
+      "model_id": "step3-vl-10b-fp8",
+      "model_path": null,
+      "parameter_count_b": 10.0,
+      "precision": "FP8",
+      "quality_score": 0.79,
+      "reason": "vLLM ranks #1 for quality; 16.7 GB of a 83.8 GB budget",
+      "recovery_action": null,
+      "runtime": "vllm",
+      "runtime_config": {
+        "enable_prefix_caching": true,
+        "gpu_memory_utilization": 0.5,
+        "kv_cache_dtype": "auto",
+        "max_num_seqs": 1
+      },
+      "simulated": false,
+      "source_id": "stepfun-ai/Step3-VL-10B-FP8"
+    },
+    "created_at": "2026-09-21T12:46:14.725087+00:00",
+    "hardware_fingerprint": "569f9f10a58d94905430137ab6e4a8d099b03d1f1ef7d29e1d2d78d79523319d",
+    "last_verified_at": "2026-09-21T12:46:14.725087+00:00",
+    "platform_id": "dgx_spark",
+    "priority": "quality",
+    "profile_key": "a506407d532b51766175",
+    "requirements": {
+      "capabilities": [],
+      "concurrency": 1,
+      "context_length": 8192,
+      "languages": [
+        "en",
+        "zh"
+      ],
+      "modalities": [
+        "image",
+        "text"
+      ],
+      "priority": "quality",
+      "privacy": "local_only",
+      "quality": "high",
+      "task": "vision"
+    },
+    "runtime_versions": {
+      "cuda": null,
+      "driver": "580.82.09",
+      "engine": "vllm",
+      "platform": "dgx_spark",
+      "runtime": "vllm"
+    },
+    "score": 75.0,
+    "simulated": false,
+    "task": "vision"
+  },
+  "candidates": [
+    {
+      "benchmark": {
+        "aggregate_throughput_tokens_s": 19.96,
+        "bandwidth_utilization": null,
+        "concurrency": 1,
+        "cpu_usage_percent": 2.0,
+        "decode_bandwidth_gbps": null,
+        "peak_memory_gb": 55.04,
+        "quality": 1.0,
+        "quality_judge": null,
+        "quality_keyword": 1.0,
+        "raw": {
+          "base_url": "http://127.0.0.1:8000",
+          "distinct_prompts": 3,
+          "engine": "vllm",
+          "engine_memory": {
+            "kv_allocated_gb": 41.01,
+            "server": {
+              "base_url": "http://127.0.0.1:8000",
+              "block_size": 16,
+              "cache_dtype": "auto",
+              "gpu_memory_utilization": 0.5,
+              "introspected": true,
+              "kv_capacity_tokens": 298608,
+              "max_model_len": 8192,
+              "num_gpu_blocks": 18663,
+              "prefix_cache_hit_rate": 0.6928,
+              "served_models": [
+                "step3-vl-10b-fp8"
+              ]
+            },
+            "total_gb": 55.04,
+            "weights_gb": 14.03
+          },
+          "image_prompt_ids": [
+            "vision-three-colors"
+          ],
+          "image_requests_measured": 3,
+          "launch_command": null,
+          "managed_by_localpilot": false,
+          "memory_attributable_gb": 0.0,
+          "memory_baseline_gb": 64.82,
+          "output_tokens_total": 260,
+          "peak_memory_source": "engine_reported_weights_plus_allocated_kv",
+          "quality_detail": "judge model unavailable",
+          "quality_samples": [
+            {
+              "answer": "用户现在需要分析图片中的颜色。首先看左边，是红色（red）；右边是蓝色（blue）；中间小正方形是绿色（green）。要确认每个部分的颜色。左边红色，右边蓝色，中间绿色正方形。需要准确描述每个部分。\n</think>\nThe color on the left is red, the color on the right is blue, and the color of the small center square is green.",
+              "expected_terms": [
+                "red",
+                "blue",
+                "green"
+              ],
+              "keyword_hit": true,
+              "prompt_id": "vision-three-colors"
+            }
+          ],
+          "requests": 3
+        },
+        "runs": 3,
+        "simulated": false,
+        "stability": 1.0,
+        "throughput_tokens_s": 20.19,
+        "total_latency_ms": 4341.15,
+        "tpot_ms": 49.52,
+        "ttft_ms": 98.76,
+        "ttft_p95_ms": 98.99,
+        "warmup_runs": 1
+      },
+      "candidate": {
+        "active_parameter_count_b": 10.0,
+        "candidate_id": "step3-vl-10b-fp8-vllm-fp8",
+        "concurrency": 1,
+        "confidence": 0.85,
+        "context_length": 8192,
+        "device": "CUDA",
+        "engine": "vllm",
+        "expected_memory_gb": 16.66,
+        "fallback_of": null,
+        "knobs": {
+          "concurrency": 1,
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.5,
+          "kv_cache_dtype": "auto",
+          "max_num_seqs": 1,
+          "num_speculative_tokens": 3,
+          "speculative_decoding": false
+        },
+        "kv_cache_dtype": "auto",
+        "memory_estimate": {
+          "activation_overhead_gb": 1.5,
+          "budget_gb": 83.79,
+          "detail": "16.7 GB of a 83.8 GB budget",
+          "fits": true,
+          "kv_cache_gb": 1.12,
+          "total_gb": 16.66,
+          "weights_gb": 14.03
+        },
+        "model_id": "step3-vl-10b-fp8",
+        "model_path": null,
+        "parameter_count_b": 10.0,
+        "precision": "FP8",
+        "quality_score": 0.79,
+        "reason": "vLLM ranks #1 for quality; 16.7 GB of a 83.8 GB budget",
+        "recovery_action": null,
+        "runtime": "vllm",
+        "runtime_config": {
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.5,
+          "kv_cache_dtype": "auto",
+          "max_num_seqs": 1
+        },
+        "simulated": false,
+        "source_id": "stepfun-ai/Step3-VL-10B-FP8"
+      },
+      "error": null,
+      "gate_failures": [],
+      "score": 75.0,
+      "score_components": {
+        "latency": 0.0,
+        "memory": 0.0,
+        "quality": 1.0,
+        "stability": 1.0,
+        "throughput": 1.0
+      },
+      "status": "success",
+      "steps": [
+        {
+          "message": "",
+          "name": "environment_check",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "model_load",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "model_start",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "health_check",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "benchmark",
+          "status": "success"
+        },
+        {
+          "message": "judge model unavailable",
+          "name": "quality_grading",
+          "status": "degraded"
+        }
+      ]
+    }
+  ],
+  "finished_at": "2026-09-21T12:46:14.726093+00:00",
+  "hardware": {
+    "accelerator": {
+      "detected": true,
+      "device_count": 1,
+      "driver_version": "580.82.09",
+      "memory_total_gb": 119.7,
+      "names": [
+        "NVIDIA GB10"
+      ],
+      "source": "nvidia-smi",
+      "unified": true
+    },
+    "available_devices": [
+      "CUDA",
+      "CPU"
+    ],
+    "cpu": {
+      "architecture": "aarch64",
+      "logical_cores": 20,
+      "model": "aarch64",
+      "workload": {
+        "usage_percent": 1.0
+      }
+    },
+    "devices": [
+      {
+        "available": true,
+        "id": "CUDA",
+        "kind": "gpu",
+        "name": "NVIDIA GB10",
+        "properties": {
+          "compute_capability": "12.1",
+          "index": 0,
+          "memory_free_gb": 0.0,
+          "memory_total_gb": 0.0,
+          "utilization_percent": 0.0
+        }
+      },
+      {
+        "available": true,
+        "id": "CPU",
+        "kind": "cpu",
+        "name": "aarch64",
+        "properties": {}
+      }
+    ],
+    "disk": {
+      "free_gb": 2566.17,
+      "total_gb": 3754.97
+    },
+    "engines": {
+      "llamacpp": {
+        "available": false,
+        "binary_path": null,
+        "engine_id": "llamacpp",
+        "kind": "server",
+        "python_module": null,
+        "source": null
+      },
+      "nim": {
+        "available": false,
+        "binary_path": "/usr/bin/docker",
+        "detail": "docker is installed but no image matching ['nvcr.io/nim/'] is present locally",
+        "engine_id": "nim",
+        "kind": "container",
+        "local_images": [],
+        "python_module": null,
+        "source": null
+      },
+      "ollama": {
+        "available": true,
+        "base_url": "http://127.0.0.1:11434",
+        "binary_path": "/usr/local/bin/ollama",
+        "detail": "http://127.0.0.1:11434 is configured but not answering /api/version",
+        "engine_id": "ollama",
+        "kind": "server",
+        "python_module": null,
+        "source": "host"
+      },
+      "sglang": {
+        "available": false,
+        "binary_path": null,
+        "detail": "docker is installed but no image matching ['lmsysorg/sglang', 'sglang'] is present locally",
+        "engine_id": "sglang",
+        "kind": "server",
+        "local_images": [],
+        "python_module": false,
+        "source": null
+      },
+      "transformers": {
+        "available": false,
+        "binary_path": null,
+        "engine_id": "transformers",
+        "kind": "library",
+        "python_module": false,
+        "source": null
+      },
+      "trtllm": {
+        "available": false,
+        "binary_path": null,
+        "detail": "docker is installed but no image matching ['nvcr.io/nvidia/tensorrt-llm', 'tensorrt_llm', 'trtllm'] is present locally",
+        "engine_id": "trtllm",
+        "kind": "server",
+        "local_images": [],
+        "python_module": false,
+        "source": null
+      },
+      "vllm": {
+        "available": true,
+        "base_url": "http://127.0.0.1:8000",
+        "binary_path": null,
+        "detail": "answering at http://127.0.0.1:8000",
+        "engine_id": "vllm",
+        "kind": "server",
+        "python_module": false,
+        "source": "reachable"
+      }
+    },
+    "fingerprint": "569f9f10a58d94905430137ab6e4a8d099b03d1f1ef7d29e1d2d78d79523319d",
+    "memory": {
+      "available_gb": 55.76,
+      "total_gb": 119.7,
+      "used_percent": 53.4
+    },
+    "memory_bandwidth_gbps": 273,
+    "notes": [
+      "DGX Spark detected: capacity is large and bandwidth is narrow, so decode is bandwidth-bound. Sparse models and speculative decoding are ranked accordingly."
+    ],
+    "os": {
+      "machine": "aarch64",
+      "name": "Linux",
+      "release": "6.11.0-1014-nvidia",
+      "version": "#14-Ubuntu SMP PREEMPT_DYNAMIC Thu Aug 14 18:27:36 UTC 2025"
+    },
+    "platform_id": "dgx_spark",
+    "real_execution_ready": true,
+    "simulated": false,
+    "stack": {
+      "cuda": {
+        "container_runtime": "/usr/bin/docker",
+        "nvcc_path": null,
+        "nvcc_version": null,
+        "torch": null
+      },
+      "engines_available": [
+        "ollama",
+        "vllm"
+      ],
+      "metal": {
+        "available": false,
+        "unified_memory": false
+      },
+      "platform": "dgx_spark",
+      "platform_detection": {
+        "architecture": "aarch64",
+        "device_tree_model": null,
+        "gpu_names": [
+          "NVIDIA GB10"
+        ],
+        "matched_on": "gpu_name contains 'GB10'"
+      }
+    },
+    "unified_memory": true
+  },
+  "intent": {
+    "capabilities": [],
+    "concurrency": 1,
+    "context_length": 8192,
+    "modalities": [
+      "image",
+      "text"
+    ],
+    "preferred_language": [
+      "zh",
+      "en"
+    ],
+    "priority": "quality",
+    "privacy": "local_only",
+    "quality": "high",
+    "raw_text": "完全本地的图片理解，识别测试图中的颜色，图片不得离开节点，单用户质量优先",
+    "task": "vision"
+  },
+  "profile_reused": false,
+  "run_id": "29019045-1414-49b4-920c-dfa7171df5cd",
+  "started_at": "2026-09-21T12:45:47.940779+00:00",
+  "status": "READY",
+  "warnings": []
+}
