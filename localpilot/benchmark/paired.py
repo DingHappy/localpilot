@@ -17,6 +17,38 @@ from localpilot.schemas import SavedProfile
 from localpilot.utils import atomic_write_json, stable_hash, utc_now
 
 
+def run_holdout(runtime, prompts, response_format, max_new_tokens=768, checkpoint=None):
+    """Validate the frozen strategy once per new input, without strategy selection."""
+    if not 1 <= len(prompts) <= 20 or not 1 <= max_new_tokens <= 2048:
+        raise ValueError('Use 1-20 documents and 1-2048 output tokens')
+    if len({p.get('id') for p in prompts}) != len(prompts):
+        raise ValueError('Document IDs must be unique')
+    for prompt in prompts:
+        if not prompt.get('expected_fields') or not prompt.get('image_url') or prompt.get('response_format') != response_format:
+            raise ValueError('Every input needs labels, an image and the frozen response format')
+    rows = []
+    for prompt in prompts:
+        sample = runtime.measure_response(prompt, max_new_tokens)
+        verdict = score_fields(sample.answer if sample.ok else '', prompt['expected_fields'])
+        completed = sample.ok and sample.finish_reason == 'stop'
+        verdict['document_exact'] = verdict['document_exact'] and completed
+        rows.append(dict(verdict, prompt_id=prompt['id'], tags=prompt.get('tags', []),
+                         request_ok=sample.ok, completed=completed, finish_reason=sample.finish_reason,
+                         total_ms=sample.total_ms, ttft_ms=sample.ttft_ms,
+                         output_tokens=sample.output_tokens, token_count_source=sample.token_count_source))
+        if checkpoint:
+            checkpoint(rows)
+    def summary(group):
+        return dict(summarize_fields(group), complete_rate=sum(r['completed'] for r in group)/len(group),
+                    mean_total_ms=mean(r['total_ms'] for r in group),
+                    min_total_ms=min(r['total_ms'] for r in group), max_total_ms=max(r['total_ms'] for r in group))
+    result = summary(rows)
+    return dict(samples=rows, summaries={'json_schema': result},
+                by_tag={tag: summary([r for r in rows if tag in r['tags']]) for tag in sorted({t for r in rows for t in r['tags']})},
+                tested_strategy='json_schema', selected_strategy=None, relative_latency_reduction=None,
+                decision='ACCEPTED' if result['document_accuracy'] == 1 and result['complete_rate'] == 1 else 'REJECTED')
+
+
 def pair_prompts(prompt, response_format):
     baseline = copy.deepcopy(prompt)
     if 'response_format' in baseline:
@@ -95,6 +127,7 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--base-url', default='http://127.0.0.1:8000')
     parser.add_argument('--repeats', type=int, default=2)
+    parser.add_argument('--holdout', action='store_true', help='Test only the frozen schema strategy once per new input')
     args = parser.parse_args()
     if args.output.exists():
         parser.error('output already exists; choose a new path')
@@ -131,6 +164,10 @@ def main():
                 'cache_policy': 'existing warm service, alternating AB/BA, no cache reset',
                 'quality_policy': 'every document exact, no failed or truncated response',
                 'scope': 'selection among two request strategies; no deployment change'}
+    if args.holdout:
+        evidence.update(changed_axis=None, repeats=1,
+                        cache_policy='existing warm service; no warmup, retries or cache reset',
+                        scope='new-input acceptance of frozen json_schema strategy; no optimization comparison')
     def checkpoint(rows):
         evidence['samples'] = rows
         atomic_write_json(args.output, evidence)
@@ -139,7 +176,10 @@ def main():
         runtime.start_model()
         evidence['engine_version'] = runtime._get('/version')
         atomic_write_json(args.output, evidence)
-        evidence.update(run_pairs(runtime, prompts, response_format, args.repeats, config['max_new_tokens'], checkpoint))
+        if args.holdout:
+            evidence.update(run_holdout(runtime, prompts, response_format, config['max_new_tokens'], checkpoint))
+        else:
+            evidence.update(run_pairs(runtime, prompts, response_format, args.repeats, config['max_new_tokens'], checkpoint))
         after = introspect('vllm', base_url=args.base_url)
         evidence['server_after'] = after.to_dict() if after else None
         keys = ('served_models', 'cache_dtype', 'gpu_memory_utilization', 'max_model_len', 'num_gpu_blocks', 'block_size')
@@ -158,7 +198,7 @@ def main():
         atomic_write_json(args.output, evidence)
         runtime.stop_model()  # Attached mode never owns or stops the server.
     print(json.dumps({k: evidence[k] for k in ('status', 'selected_strategy', 'summaries', 'relative_latency_reduction')}))
-    return 0 if evidence['status'] == 'COMPLETED' and evidence['selected_strategy'] else 1
+    return 0 if evidence['status'] == 'COMPLETED' and evidence['decision'] in {'SELECTED', 'ACCEPTED'} else 1
 
 
 if __name__ == '__main__':

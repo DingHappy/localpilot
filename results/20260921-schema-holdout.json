@@ -1,0 +1,980 @@
+{
+  "baseline_run_id": "b5073210-b185-4d45-a6ce-6a016ae02c8b",
+  "benchmark": {
+    "simulated": false
+  },
+  "by_tag": {
+    "en": {
+      "complete_rate": 1.0,
+      "document_accuracy": 1.0,
+      "documents": 10,
+      "field_accuracy": 1.0,
+      "fields_correct": 50,
+      "fields_total": 50,
+      "json_valid_rate": 1.0,
+      "max_total_ms": 4848.99138903711,
+      "mean_total_ms": 4721.551492100116,
+      "method": "json_exact_fields_v1",
+      "min_total_ms": 4474.541186995339,
+      "request_failures": 0
+    },
+    "light_blur": {
+      "complete_rate": 1.0,
+      "document_accuracy": 1.0,
+      "documents": 8,
+      "field_accuracy": 1.0,
+      "fields_correct": 40,
+      "fields_total": 40,
+      "json_valid_rate": 1.0,
+      "max_total_ms": 4848.99138903711,
+      "mean_total_ms": 4662.873182882322,
+      "method": "json_exact_fields_v1",
+      "min_total_ms": 4386.770208016969,
+      "request_failures": 0
+    },
+    "missing_po": {
+      "complete_rate": 1.0,
+      "document_accuracy": 1.0,
+      "documents": 7,
+      "field_accuracy": 1.0,
+      "fields_correct": 35,
+      "fields_total": 35,
+      "json_valid_rate": 1.0,
+      "max_total_ms": 4490.064884012099,
+      "mean_total_ms": 4415.938918719933,
+      "method": "json_exact_fields_v1",
+      "min_total_ms": 4299.416611029301,
+      "request_failures": 0
+    },
+    "present_po": {
+      "complete_rate": 1.0,
+      "document_accuracy": 1.0,
+      "documents": 13,
+      "field_accuracy": 1.0,
+      "fields_correct": 65,
+      "fields_total": 65,
+      "json_valid_rate": 1.0,
+      "max_total_ms": 4848.99138903711,
+      "mean_total_ms": 4782.370199153845,
+      "method": "json_exact_fields_v1",
+      "min_total_ms": 4706.341983051971,
+      "request_failures": 0
+    },
+    "rows": {
+      "complete_rate": 1.0,
+      "document_accuracy": 1.0,
+      "documents": 10,
+      "field_accuracy": 1.0,
+      "fields_correct": 50,
+      "fields_total": 50,
+      "json_valid_rate": 1.0,
+      "max_total_ms": 4841.338752012234,
+      "mean_total_ms": 4666.3915405923035,
+      "method": "json_exact_fields_v1",
+      "min_total_ms": 4299.416611029301,
+      "request_failures": 0
+    },
+    "sharp": {
+      "complete_rate": 1.0,
+      "document_accuracy": 1.0,
+      "documents": 12,
+      "field_accuracy": 1.0,
+      "fields_correct": 60,
+      "fields_total": 60,
+      "json_valid_rate": 1.0,
+      "max_total_ms": 4835.512102989014,
+      "mean_total_ms": 4648.2832964150775,
+      "method": "json_exact_fields_v1",
+      "min_total_ms": 4299.416611029301,
+      "request_failures": 0
+    },
+    "two_column": {
+      "complete_rate": 1.0,
+      "document_accuracy": 1.0,
+      "documents": 10,
+      "field_accuracy": 1.0,
+      "fields_correct": 50,
+      "fields_total": 50,
+      "json_valid_rate": 1.0,
+      "max_total_ms": 4848.99138903711,
+      "mean_total_ms": 4641.8469614116475,
+      "method": "json_exact_fields_v1",
+      "min_total_ms": 4378.545087995008,
+      "request_failures": 0
+    },
+    "zh": {
+      "complete_rate": 1.0,
+      "document_accuracy": 1.0,
+      "documents": 10,
+      "field_accuracy": 1.0,
+      "fields_correct": 50,
+      "fields_total": 50,
+      "json_valid_rate": 1.0,
+      "max_total_ms": 4757.52162799472,
+      "mean_total_ms": 4586.687009903835,
+      "method": "json_exact_fields_v1",
+      "min_total_ms": 4299.416611029301,
+      "request_failures": 0
+    }
+  },
+  "cache_policy": "existing warm service; no warmup, retries or cache reset",
+  "candidate": {
+    "active_parameter_count_b": 10.0,
+    "candidate_id": "step3-vl-10b-fp8-vllm-fp8",
+    "concurrency": 1,
+    "confidence": 0.85,
+    "context_length": 8192,
+    "device": "CUDA",
+    "engine": "vllm",
+    "expected_memory_gb": 16.66,
+    "fallback_of": null,
+    "knobs": {
+      "concurrency": 1,
+      "enable_prefix_caching": true,
+      "gpu_memory_utilization": 0.5,
+      "kv_cache_dtype": "auto",
+      "max_num_seqs": 1,
+      "num_speculative_tokens": 3,
+      "speculative_decoding": false
+    },
+    "kv_cache_dtype": "auto",
+    "memory_estimate": {
+      "activation_overhead_gb": 1.5,
+      "budget_gb": 83.79,
+      "detail": "16.7 GB of a 83.8 GB budget",
+      "fits": true,
+      "kv_cache_gb": 1.12,
+      "total_gb": 16.66,
+      "weights_gb": 14.03
+    },
+    "model_id": "step3-vl-10b-fp8",
+    "model_path": null,
+    "parameter_count_b": 10.0,
+    "precision": "FP8",
+    "quality_score": 0.79,
+    "reason": "vLLM ranks #1 for quality; 16.7 GB of a 83.8 GB budget",
+    "recovery_action": null,
+    "runtime": "vllm",
+    "runtime_config": {
+      "enable_prefix_caching": true,
+      "gpu_memory_utilization": 0.5,
+      "kv_cache_dtype": "auto",
+      "max_num_seqs": 1
+    },
+    "simulated": false,
+    "source_id": "stepfun-ai/Step3-VL-10B-FP8"
+  },
+  "changed_axis": null,
+  "concurrency": 1,
+  "config_sha256": "a799b7a3b67f0b721e41e2bea559c3134526b832072b40007dbe2b36630e8daa",
+  "configuration_unchanged": true,
+  "dataset_sha256": "572c63381a11c546643749bfdd7066adf64ee0311e182d4ebf18749115751621",
+  "decision": "ACCEPTED",
+  "engine_version": {
+    "version": "0.15.1+befbc472"
+  },
+  "finished_at": "2026-09-21T14:24:38.859520+00:00",
+  "hardware": {
+    "accelerator": {
+      "detected": true,
+      "device_count": 1,
+      "driver_version": "580.82.09",
+      "memory_total_gb": 119.7,
+      "names": [
+        "NVIDIA GB10"
+      ],
+      "source": "nvidia-smi",
+      "unified": true
+    },
+    "available_devices": [
+      "CUDA",
+      "CPU"
+    ],
+    "cpu": {
+      "architecture": "aarch64",
+      "logical_cores": 20,
+      "model": "aarch64",
+      "workload": {
+        "usage_percent": 0.0
+      }
+    },
+    "devices": [
+      {
+        "available": true,
+        "id": "CUDA",
+        "kind": "gpu",
+        "name": "NVIDIA GB10",
+        "properties": {
+          "compute_capability": "12.1",
+          "index": 0,
+          "memory_free_gb": 0.0,
+          "memory_total_gb": 0.0,
+          "utilization_percent": 0.0
+        }
+      },
+      {
+        "available": true,
+        "id": "CPU",
+        "kind": "cpu",
+        "name": "aarch64",
+        "properties": {}
+      }
+    ],
+    "disk": {
+      "free_gb": 2566.16,
+      "total_gb": 3754.97
+    },
+    "engines": {
+      "llamacpp": {
+        "available": false,
+        "binary_path": null,
+        "engine_id": "llamacpp",
+        "kind": "server",
+        "python_module": null,
+        "source": null
+      },
+      "nim": {
+        "available": false,
+        "binary_path": "/usr/bin/docker",
+        "detail": "docker is installed but no image matching ['nvcr.io/nim/'] is present locally",
+        "engine_id": "nim",
+        "kind": "container",
+        "local_images": [],
+        "python_module": null,
+        "source": null
+      },
+      "ollama": {
+        "available": true,
+        "base_url": "http://127.0.0.1:11434",
+        "binary_path": "/usr/local/bin/ollama",
+        "detail": "http://127.0.0.1:11434 is configured but not answering /api/version",
+        "engine_id": "ollama",
+        "kind": "server",
+        "python_module": null,
+        "source": "host"
+      },
+      "sglang": {
+        "available": false,
+        "binary_path": null,
+        "detail": "docker is installed but no image matching ['lmsysorg/sglang', 'sglang'] is present locally",
+        "engine_id": "sglang",
+        "kind": "server",
+        "local_images": [],
+        "python_module": false,
+        "source": null
+      },
+      "transformers": {
+        "available": false,
+        "binary_path": null,
+        "engine_id": "transformers",
+        "kind": "library",
+        "python_module": false,
+        "source": null
+      },
+      "trtllm": {
+        "available": false,
+        "binary_path": null,
+        "detail": "docker is installed but no image matching ['nvcr.io/nvidia/tensorrt-llm', 'tensorrt_llm', 'trtllm'] is present locally",
+        "engine_id": "trtllm",
+        "kind": "server",
+        "local_images": [],
+        "python_module": false,
+        "source": null
+      },
+      "vllm": {
+        "available": true,
+        "binary_path": null,
+        "detail": "image present: eugr/spark-vllm:latest",
+        "engine_id": "vllm",
+        "kind": "server",
+        "local_images": [
+          "eugr/spark-vllm:latest",
+          "vllm.local:26-03-07-t5",
+          "nvcr.io/nvidia/vllm:26.02-py3",
+          "vllm.local:26-03-07"
+        ],
+        "python_module": false,
+        "source": "container"
+      }
+    },
+    "fingerprint": "569f9f10a58d94905430137ab6e4a8d099b03d1f1ef7d29e1d2d78d79523319d",
+    "memory": {
+      "available_gb": 54.15,
+      "total_gb": 119.7,
+      "used_percent": 54.8
+    },
+    "memory_bandwidth_gbps": 273,
+    "notes": [
+      "DGX Spark detected: capacity is large and bandwidth is narrow, so decode is bandwidth-bound. Sparse models and speculative decoding are ranked accordingly."
+    ],
+    "os": {
+      "machine": "aarch64",
+      "name": "Linux",
+      "release": "6.11.0-1014-nvidia",
+      "version": "#14-Ubuntu SMP PREEMPT_DYNAMIC Thu Aug 14 18:27:36 UTC 2025"
+    },
+    "platform_id": "dgx_spark",
+    "real_execution_ready": true,
+    "simulated": false,
+    "stack": {
+      "cuda": {
+        "container_runtime": "/usr/bin/docker",
+        "nvcc_path": null,
+        "nvcc_version": null,
+        "torch": null
+      },
+      "engines_available": [
+        "ollama",
+        "vllm"
+      ],
+      "metal": {
+        "available": false,
+        "unified_memory": false
+      },
+      "platform": "dgx_spark",
+      "platform_detection": {
+        "architecture": "aarch64",
+        "device_tree_model": null,
+        "gpu_names": [
+          "NVIDIA GB10"
+        ],
+        "matched_on": "gpu_name contains 'GB10'"
+      }
+    },
+    "unified_memory": true
+  },
+  "managed_by_localpilot": false,
+  "max_new_tokens": 768,
+  "quality_policy": "every document exact, no failed or truncated response",
+  "relative_latency_reduction": null,
+  "repeats": 1,
+  "response_format": {
+    "json_schema": {
+      "name": "invoice_fields",
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "invoice_number": {
+            "type": "string"
+          },
+          "issue_date": {
+            "type": "string"
+          },
+          "purchase_order": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "seller": {
+            "type": "string"
+          },
+          "total_usd": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoice_number",
+          "issue_date",
+          "total_usd",
+          "seller",
+          "purchase_order"
+        ],
+        "type": "object"
+      },
+      "strict": true
+    },
+    "type": "json_schema"
+  },
+  "samples": [
+    {
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "output_tokens": 60,
+      "prompt_id": "holdout-01",
+      "request_ok": true,
+      "tags": [
+        "zh",
+        "rows",
+        "sharp",
+        "missing_po"
+      ],
+      "token_count_source": "engine_usage",
+      "total_ms": 4299.416611029301,
+      "ttft_ms": 1363.6389300227165
+    },
+    {
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "output_tokens": 69,
+      "prompt_id": "holdout-02",
+      "request_ok": true,
+      "tags": [
+        "en",
+        "rows",
+        "sharp",
+        "present_po"
+      ],
+      "token_count_source": "engine_usage",
+      "total_ms": 4767.110890010372,
+      "ttft_ms": 1375.512484984938
+    },
+    {
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "output_tokens": 68,
+      "prompt_id": "holdout-03",
+      "request_ok": true,
+      "tags": [
+        "zh",
+        "two_column",
+        "sharp",
+        "present_po"
+      ],
+      "token_count_source": "engine_usage",
+      "total_ms": 4706.341983051971,
+      "ttft_ms": 1375.6104600033723
+    },
+    {
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "output_tokens": 63,
+      "prompt_id": "holdout-04",
+      "request_ok": true,
+      "tags": [
+        "en",
+        "two_column",
+        "sharp",
+        "missing_po"
+      ],
+      "token_count_source": "engine_usage",
+      "total_ms": 4474.541186995339,
+      "ttft_ms": 1377.2780779981986
+    },
+    {
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "output_tokens": 68,
+      "prompt_id": "holdout-05",
+      "request_ok": true,
+      "tags": [
+        "zh",
+        "rows",
+        "sharp",
+        "present_po"
+      ],
+      "token_count_source": "engine_usage",
+      "total_ms": 4726.58275597496,
+      "ttft_ms": 1381.3390599680133
+    },
+    {
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "output_tokens": 70,
+      "prompt_id": "holdout-06",
+      "request_ok": true,
+      "tags": [
+        "en",
+        "rows",
+        "sharp",
+        "present_po"
+      ],
+      "token_count_source": "engine_usage",
+      "total_ms": 4817.3631729441695,
+      "ttft_ms": 1375.2093899529427
+    },
+    {
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "output_tokens": 61,
+      "prompt_id": "holdout-07",
+      "request_ok": true,
+      "tags": [
+        "zh",
+        "two_column",
+        "sharp",
+        "missing_po"
+      ],
+      "token_count_source": "engine_usage",
+      "total_ms": 4378.545087995008,
+      "ttft_ms": 1382.1668719756417
+    },
+    {
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "output_tokens": 70,
+      "prompt_id": "holdout-08",
+      "request_ok": true,
+      "tags": [
+        "en",
+        "two_column",
+        "sharp",
+        "present_po"
+      ],
+      "token_count_source": "engine_usage",
+      "total_ms": 4818.046167027205,
+      "ttft_ms": 1376.3973989989609
+    },
+    {
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "output_tokens": 68,
+      "prompt_id": "holdout-09",
+      "request_ok": true,
+      "tags": [
+        "zh",
+        "rows",
+        "sharp",
+        "present_po"
+      ],
+      "token_count_source": "engine_usage",
+      "total_ms": 4734.092375962064,
+      "ttft_ms": 1381.9069199962541
+    },
+    {
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "output_tokens": 63,
+      "prompt_id": "holdout-10",
+      "request_ok": true,
+      "tags": [
+        "en",
+        "rows",
+        "sharp",
+        "missing_po"
+      ],
+      "token_count_source": "engine_usage",
+      "total_ms": 4484.291608969215,
+      "ttft_ms": 1383.130824950058
+    },
+    {
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "output_tokens": 68,
+      "prompt_id": "holdout-11",
+      "request_ok": true,
+      "tags": [
+        "zh",
+        "two_column",
+        "sharp",
+        "present_po"
+      ],
+      "token_count_source": "engine_usage",
+      "total_ms": 4737.555614032317,
+      "ttft_ms": 1383.280692039989
+    },
+    {
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "output_tokens": 70,
+      "prompt_id": "holdout-12",
+      "request_ok": true,
+      "tags": [
+        "en",
+        "two_column",
+        "sharp",
+        "present_po"
+      ],
+      "token_count_source": "engine_usage",
+      "total_ms": 4835.512102989014,
+      "ttft_ms": 1379.7410450060852
+    },
+    {
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "output_tokens": 61,
+      "prompt_id": "holdout-13",
+      "request_ok": true,
+      "tags": [
+        "zh",
+        "rows",
+        "light_blur",
+        "missing_po"
+      ],
+      "token_count_source": "engine_usage",
+      "total_ms": 4397.9428440216,
+      "ttft_ms": 1385.7129520038143
+    },
+    {
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "output_tokens": 70,
+      "prompt_id": "holdout-14",
+      "request_ok": true,
+      "tags": [
+        "en",
+        "rows",
+        "light_blur",
+        "present_po"
+      ],
+      "token_count_source": "engine_usage",
+      "total_ms": 4841.338752012234,
+      "ttft_ms": 1386.0282630193979
+    },
+    {
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "output_tokens": 68,
+      "prompt_id": "holdout-15",
+      "request_ok": true,
+      "tags": [
+        "zh",
+        "two_column",
+        "light_blur",
+        "present_po"
+      ],
+      "token_count_source": "engine_usage",
+      "total_ms": 4742.100990959443,
+      "ttft_ms": 1383.3282529958524
+    },
+    {
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "output_tokens": 63,
+      "prompt_id": "holdout-16",
+      "request_ok": true,
+      "tags": [
+        "en",
+        "two_column",
+        "light_blur",
+        "missing_po"
+      ],
+      "token_count_source": "engine_usage",
+      "total_ms": 4490.064884012099,
+      "ttft_ms": 1382.648004044313
+    },
+    {
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "output_tokens": 68,
+      "prompt_id": "holdout-17",
+      "request_ok": true,
+      "tags": [
+        "zh",
+        "rows",
+        "light_blur",
+        "present_po"
+      ],
+      "token_count_source": "engine_usage",
+      "total_ms": 4757.52162799472,
+      "ttft_ms": 1388.0132230115123
+    },
+    {
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "output_tokens": 70,
+      "prompt_id": "holdout-18",
+      "request_ok": true,
+      "tags": [
+        "en",
+        "rows",
+        "light_blur",
+        "present_po"
+      ],
+      "token_count_source": "engine_usage",
+      "total_ms": 4838.2547670044005,
+      "ttft_ms": 1375.7938059861772
+    },
+    {
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "output_tokens": 61,
+      "prompt_id": "holdout-19",
+      "request_ok": true,
+      "tags": [
+        "zh",
+        "two_column",
+        "light_blur",
+        "missing_po"
+      ],
+      "token_count_source": "engine_usage",
+      "total_ms": 4386.770208016969,
+      "ttft_ms": 1374.1068150266074
+    },
+    {
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "output_tokens": 70,
+      "prompt_id": "holdout-20",
+      "request_ok": true,
+      "tags": [
+        "en",
+        "two_column",
+        "light_blur",
+        "present_po"
+      ],
+      "token_count_source": "engine_usage",
+      "total_ms": 4848.99138903711,
+      "ttft_ms": 1379.0863050380722
+    }
+  ],
+  "scope": "new-input acceptance of frozen json_schema strategy; no optimization comparison",
+  "selected_strategy": null,
+  "server_after": {
+    "base_url": "http://127.0.0.1:8000",
+    "block_size": 16,
+    "cache_dtype": "auto",
+    "gpu_memory_utilization": 0.5,
+    "introspected": true,
+    "kv_capacity_tokens": 298608,
+    "max_model_len": 8192,
+    "num_gpu_blocks": 18663,
+    "prefix_cache_hit_rate": 0.6158,
+    "served_models": [
+      "step3-vl-10b-fp8"
+    ]
+  },
+  "server_before": {
+    "base_url": "http://127.0.0.1:8000",
+    "block_size": 16,
+    "cache_dtype": "auto",
+    "gpu_memory_utilization": 0.5,
+    "introspected": true,
+    "kv_capacity_tokens": 298608,
+    "max_model_len": 8192,
+    "num_gpu_blocks": 18663,
+    "prefix_cache_hit_rate": 0.8458,
+    "served_models": [
+      "step3-vl-10b-fp8"
+    ]
+  },
+  "started_at": "2026-09-21T14:23:05.712038+00:00",
+  "status": "COMPLETED",
+  "summaries": {
+    "json_schema": {
+      "complete_rate": 1.0,
+      "document_accuracy": 1.0,
+      "documents": 20,
+      "field_accuracy": 1.0,
+      "fields_correct": 100,
+      "fields_total": 100,
+      "json_valid_rate": 1.0,
+      "max_total_ms": 4848.99138903711,
+      "mean_total_ms": 4654.1192510019755,
+      "method": "json_exact_fields_v1",
+      "min_total_ms": 4299.416611029301,
+      "request_failures": 0
+    }
+  },
+  "tested_strategy": "json_schema"
+}

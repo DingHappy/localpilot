@@ -3,7 +3,7 @@ import json
 import unittest
 from unittest.mock import patch
 
-from localpilot.benchmark.paired import run_pairs
+from localpilot.benchmark.paired import run_pairs, run_holdout
 from localpilot.runtime.openai_compat import StreamSample, VLLMRuntime
 from helpers import candidate
 
@@ -27,6 +27,22 @@ class FakeRuntime(VLLMRuntime):
 
 
 class PairTests(unittest.TestCase):
+    def test_holdout_counts_failures_without_retry_or_selection(self):
+        prompts = [dict(p, response_format=FORMAT, tags=['new']) for p in PROMPTS]
+        for runtime in (FakeRuntime(), FakeRuntime(wrong=True), FakeRuntime(truncated=True)):
+            got = run_holdout(runtime, prompts, FORMAT)
+            self.assertEqual(len(runtime.order), 2)
+            self.assertIsNone(got['selected_strategy'])
+            self.assertIsNone(got['relative_latency_reduction'])
+            self.assertEqual(got['decision'], 'REJECTED' if runtime.wrong or runtime.truncated else 'ACCEPTED')
+            self.assertEqual(got['by_tag']['new']['documents'], 2)
+
+    def test_holdout_requires_frozen_schema_before_any_request(self):
+        runtime = FakeRuntime()
+        with self.assertRaises(ValueError):
+            run_holdout(runtime, PROMPTS, FORMAT)
+        self.assertEqual(runtime.order, [])
+
     def test_selects_faster_only_with_same_quality(self):
         runtime = FakeRuntime()
         got = run_pairs(runtime, PROMPTS, FORMAT)

@@ -240,6 +240,12 @@ acceptance evidence remain valid. See
 [optimization](.agents/skills/local-ai-autopilot/references/optimization.md) and
 [handoff](.agents/skills/local-ai-autopilot/references/handoff.md).
 
+A runnable [document extraction handoff](examples/document-extraction/README.md)
+shows how an application calls vLLM directly with the validated prompt and JSON
+schema, using only Python's standard library. A separate
+[20-image synthetic holdout](evals/documents/holdout-v1/README.md) checks the fixed
+strategy on new inputs without retuning it or claiming another optimization gain.
+
 ![LocalPilot as the decision and memory layer above NVIDIA's per-task skills](docs/architecture-skill.svg)
 
 ## Architecture

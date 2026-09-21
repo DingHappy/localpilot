@@ -1,0 +1,1 @@
+Extract the supplied invoice into exactly one JSON object with keys invoice_number, issue_date, total_usd, seller, purchase_order. Copy visible values exactly as strings, retaining leading zeros and two decimal places. Use null for a missing purchase_order. Use the invoice total, not the reference quote. Return only the final JSON object.

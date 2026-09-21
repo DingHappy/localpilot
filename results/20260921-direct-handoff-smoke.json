@@ -1,0 +1,22 @@
+{
+  "purpose": "direct vLLM nonstreaming handoff smoke; repeated holdout inputs, not new quality samples",
+  "simulated": false,
+  "model": "step3-vl-10b-fp8",
+  "samples": [
+    {
+      "prompt_id": "holdout-01",
+      "exit_code": 0,
+      "document_exact": true
+    },
+    {
+      "prompt_id": "holdout-14",
+      "exit_code": 0,
+      "document_exact": true
+    }
+  ],
+  "files_sha256": {
+    "examples/document-extraction/response-format.json": "a39cdfc9a10a906b267a6e9dcdaba229f0339659bf357c3d7221d1a9b5520450",
+    "examples/document-extraction/prompt.txt": "dd4afd939d4ba3e0dd220676edf7eab4583b505505f50f398b4ce89dc7f549dc",
+    "examples/document-extraction/extract.py": "e0832bd7a586d88647b12d97b8416d5a65b591df9aa1b8d893cd155ad169f570"
+  }
+}
