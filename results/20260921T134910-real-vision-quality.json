@@ -1,0 +1,871 @@
+{
+  "agent_trace": [
+    {
+      "action": "read_hardware",
+      "agent": "planner",
+      "data": {
+        "engines_available": [
+          "ollama",
+          "vllm"
+        ],
+        "platform_id": "dgx_spark",
+        "simulated": false,
+        "unified_memory": true
+      },
+      "detail": "dgx_spark: 119.7 GB unified, 273 GB/s",
+      "status": "success"
+    },
+    {
+      "action": "restrict_to_served",
+      "agent": "planner",
+      "data": {
+        "dropped": [
+          "qwen3.8-27b-mlx",
+          "step-3.7-flash-nvfp4",
+          "nemotron-nano-12b-v2-vl-fp8"
+        ],
+        "kept": [
+          "step3-vl-10b-fp8"
+        ],
+        "served": [
+          "step3-vl-10b-fp8"
+        ]
+      },
+      "detail": "Attached to a server already running ['step3-vl-10b-fp8'], so the plan can only measure that. Dropped 3 model(s) this server cannot answer for: qwen3.8-27b-mlx, step-3.7-flash-nvfp4, nemotron-nano-12b-v2-vl-fp8. Comparing across models needs one server per model.",
+      "status": "degraded"
+    },
+    {
+      "action": "reconcile_with_server",
+      "agent": "planner",
+      "data": {
+        "adopted": [
+          "step3-vl-10b-fp8-vllm-fp8: utilization 0.7 -> 0.5",
+          "step3-vl-10b-fp8-vllm-fp8-kvfp8: utilization 0.7 -> 0.5"
+        ],
+        "kept": [
+          "step3-vl-10b-fp8-vllm-fp8"
+        ],
+        "rejected": [
+          {
+            "candidate_id": "step3-vl-10b-fp8-vllm-fp8-kvfp8",
+            "mismatches": [
+              "KV cache dtype declared fp8, server runs auto"
+            ]
+          }
+        ],
+        "server": {
+          "base_url": "http://127.0.0.1:8000",
+          "block_size": 16,
+          "cache_dtype": "auto",
+          "gpu_memory_utilization": 0.5,
+          "introspected": true,
+          "kv_capacity_tokens": 298608,
+          "max_model_len": 8192,
+          "num_gpu_blocks": 18663,
+          "prefix_cache_hit_rate": 0.8124,
+          "served_models": [
+            "step3-vl-10b-fp8"
+          ]
+        }
+      },
+      "detail": "The attached server runs one configuration (kv=auto, util=0.5, max_len=8192), so 1 candidate(s) whose knobs differ were dropped rather than measured under a label they do not match: step3-vl-10b-fp8-vllm-fp8-kvfp8 [KV cache dtype declared fp8, server runs auto]",
+      "status": "degraded"
+    },
+    {
+      "action": "adopt_server_knobs",
+      "agent": "planner",
+      "data": {
+        "adopted": [
+          "step3-vl-10b-fp8-vllm-fp8: utilization 0.7 -> 0.5",
+          "step3-vl-10b-fp8-vllm-fp8-kvfp8: utilization 0.7 -> 0.5"
+        ]
+      },
+      "detail": "Adopted the server's own setting rather than measuring under a label it does not match: step3-vl-10b-fp8-vllm-fp8: utilization 0.7 -> 0.5; step3-vl-10b-fp8-vllm-fp8-kvfp8: utilization 0.7 -> 0.5",
+      "status": "degraded"
+    },
+    {
+      "action": "propose_candidate",
+      "agent": "planner",
+      "data": {
+        "candidate_id": "step3-vl-10b-fp8-vllm-fp8",
+        "concurrency": 1,
+        "context_length": 8192,
+        "engine": "vllm",
+        "expected_memory_gb": 16.66,
+        "precision": "FP8",
+        "roofline_decode_tokens_s": 20.5,
+        "speculative_decoding": false
+      },
+      "detail": "vLLM ranks #1 for quality; 16.7 GB of a 83.8 GB budget",
+      "status": "success"
+    },
+    {
+      "action": "plan_complete",
+      "agent": "planner",
+      "data": {},
+      "detail": "1 candidates across 1 models and 1 engines",
+      "status": "success"
+    },
+    {
+      "action": "grade_fields",
+      "agent": "judge",
+      "data": {
+        "dataset_sha256": "f9d3edf9ba95ec21190e3c30ef8ff9244fbb2b16e818de05c09a2d2faf7c584f",
+        "document_accuracy": 1.0,
+        "documents": 6,
+        "field_accuracy": 1.0,
+        "fields_correct": 30,
+        "fields_total": 30,
+        "json_valid_rate": 1.0,
+        "method": "json_exact_fields_v1",
+        "request_failures": 0
+      },
+      "detail": "Deterministic JSON field acceptance",
+      "status": "success"
+    },
+    {
+      "action": "measure_candidate",
+      "agent": "bench",
+      "data": {
+        "aggregate_throughput_tokens_s": 19.77,
+        "candidate_id": "step3-vl-10b-fp8-vllm-fp8",
+        "peak_memory_gb": 55.04,
+        "peak_memory_source": "engine_reported_weights_plus_allocated_kv",
+        "quality": 1.0,
+        "simulated": false,
+        "throughput_tokens_s": 20.08,
+        "ttft_ms": 97.13
+      },
+      "detail": "step3-vl-10b-fp8-vllm-fp8: TTFT 97 ms, 20.1 tok/s/stream, 55.0 GB peak memory, 19.8 tok/s aggregate",
+      "status": "success"
+    },
+    {
+      "action": "rank_candidates",
+      "agent": "optimizer",
+      "data": {
+        "acceptance": {
+          "min_quality": 1.0,
+          "objective": "fastest_complete"
+        },
+        "components": {
+          "fastest_complete": 1.0
+        },
+        "ranking": [
+          {
+            "candidate_id": "step3-vl-10b-fp8-vllm-fp8",
+            "gate_failures": [],
+            "score": 100.0
+          }
+        ],
+        "score": 100.0,
+        "winner": "step3-vl-10b-fp8-vllm-fp8"
+      },
+      "detail": "step3-vl-10b-fp8-vllm-fp8 wins with 100.00/100 under priority 'quality'",
+      "status": "success"
+    },
+    {
+      "action": "save_profile",
+      "agent": "memory",
+      "data": {
+        "profile_key": "52b256d0a4915bbff292"
+      },
+      "detail": "Profile 52b256d0a4915bbff292 activated for vision/quality on this fingerprint",
+      "status": "success"
+    }
+  ],
+  "best_profile": {
+    "benchmark": {
+      "aggregate_throughput_tokens_s": 19.77,
+      "bandwidth_utilization": null,
+      "concurrency": 1,
+      "cpu_usage_percent": 2.0,
+      "decode_bandwidth_gbps": null,
+      "peak_memory_gb": 55.04,
+      "quality": 1.0,
+      "quality_judge": null,
+      "quality_keyword": null,
+      "raw": {
+        "acceptance": {
+          "min_quality": 1.0,
+          "objective": "fastest_complete"
+        },
+        "base_url": "http://127.0.0.1:8000",
+        "benchmark_config_sha256": "c3d03eabe15fcb8f844af80bdac9d9aba012e58bbb9b2c3b4bff713df61c9092",
+        "benchmark_dataset_id": "synthetic-invoices-v1",
+        "distinct_prompts": 1,
+        "engine": "vllm",
+        "engine_memory": {
+          "kv_allocated_gb": 41.01,
+          "server": {
+            "base_url": "http://127.0.0.1:8000",
+            "block_size": 16,
+            "cache_dtype": "auto",
+            "gpu_memory_utilization": 0.5,
+            "introspected": true,
+            "kv_capacity_tokens": 298608,
+            "max_model_len": 8192,
+            "num_gpu_blocks": 18663,
+            "prefix_cache_hit_rate": 0.8274,
+            "served_models": [
+              "step3-vl-10b-fp8"
+            ]
+          },
+          "total_gb": 55.04,
+          "weights_gb": 14.03
+        },
+        "image_prompt_ids": [
+          "invoice-01",
+          "invoice-02",
+          "invoice-03",
+          "invoice-04",
+          "invoice-05",
+          "invoice-06"
+        ],
+        "image_requests_measured": 3,
+        "launch_command": null,
+        "managed_by_localpilot": false,
+        "max_new_tokens": 768,
+        "memory_attributable_gb": 0.0,
+        "memory_baseline_gb": 65.55,
+        "output_tokens_total": 182,
+        "peak_memory_source": "engine_reported_weights_plus_allocated_kv",
+        "quality_detail": "Exact JSON document match; not a semantic judge score",
+        "quality_samples": [
+          {
+            "document_exact": true,
+            "field_matches": {
+              "invoice_number": true,
+              "issue_date": true,
+              "purchase_order": true,
+              "seller": true,
+              "total_usd": true
+            },
+            "fields_correct": 5,
+            "fields_total": 5,
+            "json_valid": true,
+            "prompt_id": "invoice-01"
+          },
+          {
+            "document_exact": true,
+            "field_matches": {
+              "invoice_number": true,
+              "issue_date": true,
+              "purchase_order": true,
+              "seller": true,
+              "total_usd": true
+            },
+            "fields_correct": 5,
+            "fields_total": 5,
+            "json_valid": true,
+            "prompt_id": "invoice-02"
+          },
+          {
+            "document_exact": true,
+            "field_matches": {
+              "invoice_number": true,
+              "issue_date": true,
+              "purchase_order": true,
+              "seller": true,
+              "total_usd": true
+            },
+            "fields_correct": 5,
+            "fields_total": 5,
+            "json_valid": true,
+            "prompt_id": "invoice-03"
+          },
+          {
+            "document_exact": true,
+            "field_matches": {
+              "invoice_number": true,
+              "issue_date": true,
+              "purchase_order": true,
+              "seller": true,
+              "total_usd": true
+            },
+            "fields_correct": 5,
+            "fields_total": 5,
+            "json_valid": true,
+            "prompt_id": "invoice-04"
+          },
+          {
+            "document_exact": true,
+            "field_matches": {
+              "invoice_number": true,
+              "issue_date": true,
+              "purchase_order": true,
+              "seller": true,
+              "total_usd": true
+            },
+            "fields_correct": 5,
+            "fields_total": 5,
+            "json_valid": true,
+            "prompt_id": "invoice-05"
+          },
+          {
+            "document_exact": true,
+            "field_matches": {
+              "invoice_number": true,
+              "issue_date": true,
+              "purchase_order": true,
+              "seller": true,
+              "total_usd": true
+            },
+            "fields_correct": 5,
+            "fields_total": 5,
+            "json_valid": true,
+            "prompt_id": "invoice-06"
+          }
+        ],
+        "requests": 3,
+        "structured_quality": {
+          "dataset_sha256": "f9d3edf9ba95ec21190e3c30ef8ff9244fbb2b16e818de05c09a2d2faf7c584f",
+          "document_accuracy": 1.0,
+          "documents": 6,
+          "field_accuracy": 1.0,
+          "fields_correct": 30,
+          "fields_total": 30,
+          "json_valid_rate": 1.0,
+          "method": "json_exact_fields_v1",
+          "request_failures": 0
+        }
+      },
+      "runs": 3,
+      "simulated": false,
+      "stability": 1.0,
+      "throughput_tokens_s": 20.08,
+      "total_latency_ms": 3069.11,
+      "tpot_ms": 49.81,
+      "ttft_ms": 97.13,
+      "ttft_p95_ms": 97.65,
+      "warmup_runs": 1
+    },
+    "candidate": {
+      "active_parameter_count_b": 10.0,
+      "candidate_id": "step3-vl-10b-fp8-vllm-fp8",
+      "concurrency": 1,
+      "confidence": 0.85,
+      "context_length": 8192,
+      "device": "CUDA",
+      "engine": "vllm",
+      "expected_memory_gb": 16.66,
+      "fallback_of": null,
+      "knobs": {
+        "concurrency": 1,
+        "enable_prefix_caching": true,
+        "gpu_memory_utilization": 0.5,
+        "kv_cache_dtype": "auto",
+        "max_num_seqs": 1,
+        "num_speculative_tokens": 3,
+        "speculative_decoding": false
+      },
+      "kv_cache_dtype": "auto",
+      "memory_estimate": {
+        "activation_overhead_gb": 1.5,
+        "budget_gb": 83.79,
+        "detail": "16.7 GB of a 83.8 GB budget",
+        "fits": true,
+        "kv_cache_gb": 1.12,
+        "total_gb": 16.66,
+        "weights_gb": 14.03
+      },
+      "model_id": "step3-vl-10b-fp8",
+      "model_path": null,
+      "parameter_count_b": 10.0,
+      "precision": "FP8",
+      "quality_score": 0.79,
+      "reason": "vLLM ranks #1 for quality; 16.7 GB of a 83.8 GB budget",
+      "recovery_action": null,
+      "runtime": "vllm",
+      "runtime_config": {
+        "enable_prefix_caching": true,
+        "gpu_memory_utilization": 0.5,
+        "kv_cache_dtype": "auto",
+        "max_num_seqs": 1
+      },
+      "simulated": false,
+      "source_id": "stepfun-ai/Step3-VL-10B-FP8"
+    },
+    "created_at": "2026-09-21T13:49:10.625307+00:00",
+    "hardware_fingerprint": "569f9f10a58d94905430137ab6e4a8d099b03d1f1ef7d29e1d2d78d79523319d",
+    "last_verified_at": "2026-09-21T13:49:10.625307+00:00",
+    "platform_id": "dgx_spark",
+    "priority": "quality",
+    "profile_key": "52b256d0a4915bbff292",
+    "requirements": {
+      "benchmark_sha256": "c3d03eabe15fcb8f844af80bdac9d9aba012e58bbb9b2c3b4bff713df61c9092",
+      "capabilities": [],
+      "concurrency": 1,
+      "context_length": 8192,
+      "languages": [
+        "en",
+        "zh"
+      ],
+      "modalities": [
+        "image",
+        "text"
+      ],
+      "priority": "quality",
+      "privacy": "local_only",
+      "quality": "high",
+      "task": "vision"
+    },
+    "runtime_versions": {
+      "cuda": null,
+      "driver": "580.82.09",
+      "engine": "vllm",
+      "platform": "dgx_spark",
+      "runtime": "vllm"
+    },
+    "score": 100.0,
+    "simulated": false,
+    "task": "vision"
+  },
+  "candidates": [
+    {
+      "benchmark": {
+        "aggregate_throughput_tokens_s": 19.77,
+        "bandwidth_utilization": null,
+        "concurrency": 1,
+        "cpu_usage_percent": 2.0,
+        "decode_bandwidth_gbps": null,
+        "peak_memory_gb": 55.04,
+        "quality": 1.0,
+        "quality_judge": null,
+        "quality_keyword": null,
+        "raw": {
+          "acceptance": {
+            "min_quality": 1.0,
+            "objective": "fastest_complete"
+          },
+          "base_url": "http://127.0.0.1:8000",
+          "benchmark_config_sha256": "c3d03eabe15fcb8f844af80bdac9d9aba012e58bbb9b2c3b4bff713df61c9092",
+          "benchmark_dataset_id": "synthetic-invoices-v1",
+          "distinct_prompts": 1,
+          "engine": "vllm",
+          "engine_memory": {
+            "kv_allocated_gb": 41.01,
+            "server": {
+              "base_url": "http://127.0.0.1:8000",
+              "block_size": 16,
+              "cache_dtype": "auto",
+              "gpu_memory_utilization": 0.5,
+              "introspected": true,
+              "kv_capacity_tokens": 298608,
+              "max_model_len": 8192,
+              "num_gpu_blocks": 18663,
+              "prefix_cache_hit_rate": 0.8274,
+              "served_models": [
+                "step3-vl-10b-fp8"
+              ]
+            },
+            "total_gb": 55.04,
+            "weights_gb": 14.03
+          },
+          "image_prompt_ids": [
+            "invoice-01",
+            "invoice-02",
+            "invoice-03",
+            "invoice-04",
+            "invoice-05",
+            "invoice-06"
+          ],
+          "image_requests_measured": 3,
+          "launch_command": null,
+          "managed_by_localpilot": false,
+          "max_new_tokens": 768,
+          "memory_attributable_gb": 0.0,
+          "memory_baseline_gb": 65.55,
+          "output_tokens_total": 182,
+          "peak_memory_source": "engine_reported_weights_plus_allocated_kv",
+          "quality_detail": "Exact JSON document match; not a semantic judge score",
+          "quality_samples": [
+            {
+              "document_exact": true,
+              "field_matches": {
+                "invoice_number": true,
+                "issue_date": true,
+                "purchase_order": true,
+                "seller": true,
+                "total_usd": true
+              },
+              "fields_correct": 5,
+              "fields_total": 5,
+              "json_valid": true,
+              "prompt_id": "invoice-01"
+            },
+            {
+              "document_exact": true,
+              "field_matches": {
+                "invoice_number": true,
+                "issue_date": true,
+                "purchase_order": true,
+                "seller": true,
+                "total_usd": true
+              },
+              "fields_correct": 5,
+              "fields_total": 5,
+              "json_valid": true,
+              "prompt_id": "invoice-02"
+            },
+            {
+              "document_exact": true,
+              "field_matches": {
+                "invoice_number": true,
+                "issue_date": true,
+                "purchase_order": true,
+                "seller": true,
+                "total_usd": true
+              },
+              "fields_correct": 5,
+              "fields_total": 5,
+              "json_valid": true,
+              "prompt_id": "invoice-03"
+            },
+            {
+              "document_exact": true,
+              "field_matches": {
+                "invoice_number": true,
+                "issue_date": true,
+                "purchase_order": true,
+                "seller": true,
+                "total_usd": true
+              },
+              "fields_correct": 5,
+              "fields_total": 5,
+              "json_valid": true,
+              "prompt_id": "invoice-04"
+            },
+            {
+              "document_exact": true,
+              "field_matches": {
+                "invoice_number": true,
+                "issue_date": true,
+                "purchase_order": true,
+                "seller": true,
+                "total_usd": true
+              },
+              "fields_correct": 5,
+              "fields_total": 5,
+              "json_valid": true,
+              "prompt_id": "invoice-05"
+            },
+            {
+              "document_exact": true,
+              "field_matches": {
+                "invoice_number": true,
+                "issue_date": true,
+                "purchase_order": true,
+                "seller": true,
+                "total_usd": true
+              },
+              "fields_correct": 5,
+              "fields_total": 5,
+              "json_valid": true,
+              "prompt_id": "invoice-06"
+            }
+          ],
+          "requests": 3,
+          "structured_quality": {
+            "dataset_sha256": "f9d3edf9ba95ec21190e3c30ef8ff9244fbb2b16e818de05c09a2d2faf7c584f",
+            "document_accuracy": 1.0,
+            "documents": 6,
+            "field_accuracy": 1.0,
+            "fields_correct": 30,
+            "fields_total": 30,
+            "json_valid_rate": 1.0,
+            "method": "json_exact_fields_v1",
+            "request_failures": 0
+          }
+        },
+        "runs": 3,
+        "simulated": false,
+        "stability": 1.0,
+        "throughput_tokens_s": 20.08,
+        "total_latency_ms": 3069.11,
+        "tpot_ms": 49.81,
+        "ttft_ms": 97.13,
+        "ttft_p95_ms": 97.65,
+        "warmup_runs": 1
+      },
+      "candidate": {
+        "active_parameter_count_b": 10.0,
+        "candidate_id": "step3-vl-10b-fp8-vllm-fp8",
+        "concurrency": 1,
+        "confidence": 0.85,
+        "context_length": 8192,
+        "device": "CUDA",
+        "engine": "vllm",
+        "expected_memory_gb": 16.66,
+        "fallback_of": null,
+        "knobs": {
+          "concurrency": 1,
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.5,
+          "kv_cache_dtype": "auto",
+          "max_num_seqs": 1,
+          "num_speculative_tokens": 3,
+          "speculative_decoding": false
+        },
+        "kv_cache_dtype": "auto",
+        "memory_estimate": {
+          "activation_overhead_gb": 1.5,
+          "budget_gb": 83.79,
+          "detail": "16.7 GB of a 83.8 GB budget",
+          "fits": true,
+          "kv_cache_gb": 1.12,
+          "total_gb": 16.66,
+          "weights_gb": 14.03
+        },
+        "model_id": "step3-vl-10b-fp8",
+        "model_path": null,
+        "parameter_count_b": 10.0,
+        "precision": "FP8",
+        "quality_score": 0.79,
+        "reason": "vLLM ranks #1 for quality; 16.7 GB of a 83.8 GB budget",
+        "recovery_action": null,
+        "runtime": "vllm",
+        "runtime_config": {
+          "enable_prefix_caching": true,
+          "gpu_memory_utilization": 0.5,
+          "kv_cache_dtype": "auto",
+          "max_num_seqs": 1
+        },
+        "simulated": false,
+        "source_id": "stepfun-ai/Step3-VL-10B-FP8"
+      },
+      "error": null,
+      "gate_failures": [],
+      "score": 100.0,
+      "score_components": {
+        "fastest_complete": 1.0
+      },
+      "status": "success",
+      "steps": [
+        {
+          "message": "",
+          "name": "environment_check",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "model_load",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "model_start",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "health_check",
+          "status": "success"
+        },
+        {
+          "message": "",
+          "name": "benchmark",
+          "status": "success"
+        },
+        {
+          "message": "Exact JSON document match; not a semantic judge score",
+          "name": "quality_grading",
+          "status": "success"
+        }
+      ]
+    }
+  ],
+  "evidence_source_commit": "d21d3fd",
+  "finished_at": "2026-09-21T13:49:10.628013+00:00",
+  "hardware": {
+    "accelerator": {
+      "detected": true,
+      "device_count": 1,
+      "driver_version": "580.82.09",
+      "memory_total_gb": 119.7,
+      "names": [
+        "NVIDIA GB10"
+      ],
+      "source": "nvidia-smi",
+      "unified": true
+    },
+    "available_devices": [
+      "CUDA",
+      "CPU"
+    ],
+    "cpu": {
+      "architecture": "aarch64",
+      "logical_cores": 20,
+      "model": "aarch64",
+      "workload": {
+        "usage_percent": 1.0
+      }
+    },
+    "devices": [
+      {
+        "available": true,
+        "id": "CUDA",
+        "kind": "gpu",
+        "name": "NVIDIA GB10",
+        "properties": {
+          "compute_capability": "12.1",
+          "index": 0,
+          "memory_free_gb": 0.0,
+          "memory_total_gb": 0.0,
+          "utilization_percent": 0.0
+        }
+      },
+      {
+        "available": true,
+        "id": "CPU",
+        "kind": "cpu",
+        "name": "aarch64",
+        "properties": {}
+      }
+    ],
+    "disk": {
+      "free_gb": 2566.16,
+      "total_gb": 3754.97
+    },
+    "engines": {
+      "llamacpp": {
+        "available": false,
+        "binary_path": null,
+        "engine_id": "llamacpp",
+        "kind": "server",
+        "python_module": null,
+        "source": null
+      },
+      "nim": {
+        "available": false,
+        "binary_path": "/usr/bin/docker",
+        "detail": "docker is installed but no image matching ['nvcr.io/nim/'] is present locally",
+        "engine_id": "nim",
+        "kind": "container",
+        "local_images": [],
+        "python_module": null,
+        "source": null
+      },
+      "ollama": {
+        "available": true,
+        "base_url": "http://127.0.0.1:11434",
+        "binary_path": "/usr/local/bin/ollama",
+        "detail": "http://127.0.0.1:11434 is configured but not answering /api/version",
+        "engine_id": "ollama",
+        "kind": "server",
+        "python_module": null,
+        "source": "host"
+      },
+      "sglang": {
+        "available": false,
+        "binary_path": null,
+        "detail": "docker is installed but no image matching ['lmsysorg/sglang', 'sglang'] is present locally",
+        "engine_id": "sglang",
+        "kind": "server",
+        "local_images": [],
+        "python_module": false,
+        "source": null
+      },
+      "transformers": {
+        "available": false,
+        "binary_path": null,
+        "engine_id": "transformers",
+        "kind": "library",
+        "python_module": false,
+        "source": null
+      },
+      "trtllm": {
+        "available": false,
+        "binary_path": null,
+        "detail": "docker is installed but no image matching ['nvcr.io/nvidia/tensorrt-llm', 'tensorrt_llm', 'trtllm'] is present locally",
+        "engine_id": "trtllm",
+        "kind": "server",
+        "local_images": [],
+        "python_module": false,
+        "source": null
+      },
+      "vllm": {
+        "available": true,
+        "base_url": "http://127.0.0.1:8000",
+        "binary_path": null,
+        "detail": "answering at http://127.0.0.1:8000",
+        "engine_id": "vllm",
+        "kind": "server",
+        "python_module": false,
+        "source": "reachable"
+      }
+    },
+    "fingerprint": "569f9f10a58d94905430137ab6e4a8d099b03d1f1ef7d29e1d2d78d79523319d",
+    "memory": {
+      "available_gb": 54.17,
+      "total_gb": 119.7,
+      "used_percent": 54.7
+    },
+    "memory_bandwidth_gbps": 273,
+    "notes": [
+      "DGX Spark detected: capacity is large and bandwidth is narrow, so decode is bandwidth-bound. Sparse models and speculative decoding are ranked accordingly."
+    ],
+    "os": {
+      "machine": "aarch64",
+      "name": "Linux",
+      "release": "6.11.0-1014-nvidia",
+      "version": "#14-Ubuntu SMP PREEMPT_DYNAMIC Thu Aug 14 18:27:36 UTC 2025"
+    },
+    "platform_id": "dgx_spark",
+    "real_execution_ready": true,
+    "simulated": false,
+    "stack": {
+      "cuda": {
+        "container_runtime": "/usr/bin/docker",
+        "nvcc_path": null,
+        "nvcc_version": null,
+        "torch": null
+      },
+      "engines_available": [
+        "ollama",
+        "vllm"
+      ],
+      "metal": {
+        "available": false,
+        "unified_memory": false
+      },
+      "platform": "dgx_spark",
+      "platform_detection": {
+        "architecture": "aarch64",
+        "device_tree_model": null,
+        "gpu_names": [
+          "NVIDIA GB10"
+        ],
+        "matched_on": "gpu_name contains 'GB10'"
+      }
+    },
+    "unified_memory": true
+  },
+  "intent": {
+    "capabilities": [],
+    "concurrency": 1,
+    "context_length": 8192,
+    "modalities": [
+      "image",
+      "text"
+    ],
+    "preferred_language": [
+      "zh",
+      "en"
+    ],
+    "priority": "quality",
+    "privacy": "local_only",
+    "quality": "high",
+    "raw_text": "本地发票图片字段提取，单用户质量优先",
+    "task": "vision"
+  },
+  "output_strategy_selection": {
+    "changed_axis": "response_format",
+    "pair_sha256": "6e1ab7adccac5378503ee191c167052e4eab41804859ae6539080d7e6d393b26",
+    "selected_strategy": "json_schema"
+  },
+  "profile_reused": false,
+  "run_id": "d4e95a9e-20cc-4d6f-8ee7-9ce61b7f2e3a",
+  "started_at": "2026-09-21T13:48:39.471844+00:00",
+  "status": "READY",
+  "warnings": []
+}

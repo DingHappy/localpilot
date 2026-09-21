@@ -319,6 +319,13 @@ These small-sample results do not establish production invoice accuracy or
 configuration optimization; see the
 [validation scope](results/20260921-document-field-validation.md).
 
+A subsequent [paired output-strategy experiment](results/20260921-output-strategy-comparison.md)
+changed only `response_format`: mean complete response fell from 9.764 s to
+3.138 s, with 60/60 fields correct in each arm (six synthetic images, two
+repetitions). This is reduced generation work on a warm service, not a GPU
+decode-speed claim. The selected strategy also passed a separate standard
+autopilot acceptance run; its reusable benchmark config is linked in the report.
+
 ## How the measurement is taken
 
 Details that decide whether the numbers mean anything:

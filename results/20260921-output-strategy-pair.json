@@ -1,0 +1,930 @@
+{
+  "baseline_run_id": "b5073210-b185-4d45-a6ce-6a016ae02c8b",
+  "benchmark": {
+    "simulated": false
+  },
+  "cache_policy": "existing warm service, alternating AB/BA, no cache reset",
+  "candidate": {
+    "active_parameter_count_b": 10.0,
+    "candidate_id": "step3-vl-10b-fp8-vllm-fp8",
+    "concurrency": 1,
+    "confidence": 0.85,
+    "context_length": 8192,
+    "device": "CUDA",
+    "engine": "vllm",
+    "expected_memory_gb": 16.66,
+    "fallback_of": null,
+    "knobs": {
+      "concurrency": 1,
+      "enable_prefix_caching": true,
+      "gpu_memory_utilization": 0.5,
+      "kv_cache_dtype": "auto",
+      "max_num_seqs": 1,
+      "num_speculative_tokens": 3,
+      "speculative_decoding": false
+    },
+    "kv_cache_dtype": "auto",
+    "memory_estimate": {
+      "activation_overhead_gb": 1.5,
+      "budget_gb": 83.79,
+      "detail": "16.7 GB of a 83.8 GB budget",
+      "fits": true,
+      "kv_cache_gb": 1.12,
+      "total_gb": 16.66,
+      "weights_gb": 14.03
+    },
+    "model_id": "step3-vl-10b-fp8",
+    "model_path": null,
+    "parameter_count_b": 10.0,
+    "precision": "FP8",
+    "quality_score": 0.79,
+    "reason": "vLLM ranks #1 for quality; 16.7 GB of a 83.8 GB budget",
+    "recovery_action": null,
+    "runtime": "vllm",
+    "runtime_config": {
+      "enable_prefix_caching": true,
+      "gpu_memory_utilization": 0.5,
+      "kv_cache_dtype": "auto",
+      "max_num_seqs": 1
+    },
+    "simulated": false,
+    "source_id": "stepfun-ai/Step3-VL-10B-FP8"
+  },
+  "changed_axis": "response_format",
+  "concurrency": 1,
+  "config_sha256": "02ddd0d8e4eb892dba6703fb1fa9a89393b167cbdeb66f4591d1fea3809fad0f",
+  "configuration_unchanged": true,
+  "dataset_sha256": "470ed604b75f5b9e5643b6a2c83a1b057c8e786f194d4fdee5c7d4d5893b1157",
+  "decision": "SELECTED",
+  "engine_version": {
+    "version": "0.15.1+befbc472"
+  },
+  "finished_at": "2026-09-21T13:45:07.883593+00:00",
+  "hardware": {
+    "accelerator": {
+      "detected": true,
+      "device_count": 1,
+      "driver_version": "580.82.09",
+      "memory_total_gb": 119.7,
+      "names": [
+        "NVIDIA GB10"
+      ],
+      "source": "nvidia-smi",
+      "unified": true
+    },
+    "available_devices": [
+      "CUDA",
+      "CPU"
+    ],
+    "cpu": {
+      "architecture": "aarch64",
+      "logical_cores": 20,
+      "model": "aarch64",
+      "workload": {
+        "usage_percent": 0.0
+      }
+    },
+    "devices": [
+      {
+        "available": true,
+        "id": "CUDA",
+        "kind": "gpu",
+        "name": "NVIDIA GB10",
+        "properties": {
+          "compute_capability": "12.1",
+          "index": 0,
+          "memory_free_gb": 0.0,
+          "memory_total_gb": 0.0,
+          "utilization_percent": 0.0
+        }
+      },
+      {
+        "available": true,
+        "id": "CPU",
+        "kind": "cpu",
+        "name": "aarch64",
+        "properties": {}
+      }
+    ],
+    "disk": {
+      "free_gb": 2566.16,
+      "total_gb": 3754.97
+    },
+    "engines": {
+      "llamacpp": {
+        "available": false,
+        "binary_path": null,
+        "engine_id": "llamacpp",
+        "kind": "server",
+        "python_module": null,
+        "source": null
+      },
+      "nim": {
+        "available": false,
+        "binary_path": "/usr/bin/docker",
+        "detail": "docker is installed but no image matching ['nvcr.io/nim/'] is present locally",
+        "engine_id": "nim",
+        "kind": "container",
+        "local_images": [],
+        "python_module": null,
+        "source": null
+      },
+      "ollama": {
+        "available": true,
+        "base_url": "http://127.0.0.1:11434",
+        "binary_path": "/usr/local/bin/ollama",
+        "detail": "http://127.0.0.1:11434 is configured but not answering /api/version",
+        "engine_id": "ollama",
+        "kind": "server",
+        "python_module": null,
+        "source": "host"
+      },
+      "sglang": {
+        "available": false,
+        "binary_path": null,
+        "detail": "docker is installed but no image matching ['lmsysorg/sglang', 'sglang'] is present locally",
+        "engine_id": "sglang",
+        "kind": "server",
+        "local_images": [],
+        "python_module": false,
+        "source": null
+      },
+      "transformers": {
+        "available": false,
+        "binary_path": null,
+        "engine_id": "transformers",
+        "kind": "library",
+        "python_module": false,
+        "source": null
+      },
+      "trtllm": {
+        "available": false,
+        "binary_path": null,
+        "detail": "docker is installed but no image matching ['nvcr.io/nvidia/tensorrt-llm', 'tensorrt_llm', 'trtllm'] is present locally",
+        "engine_id": "trtllm",
+        "kind": "server",
+        "local_images": [],
+        "python_module": false,
+        "source": null
+      },
+      "vllm": {
+        "available": true,
+        "binary_path": null,
+        "detail": "image present: eugr/spark-vllm:latest",
+        "engine_id": "vllm",
+        "kind": "server",
+        "local_images": [
+          "eugr/spark-vllm:latest",
+          "vllm.local:26-03-07-t5",
+          "nvcr.io/nvidia/vllm:26.02-py3",
+          "vllm.local:26-03-07"
+        ],
+        "python_module": false,
+        "source": "container"
+      }
+    },
+    "fingerprint": "569f9f10a58d94905430137ab6e4a8d099b03d1f1ef7d29e1d2d78d79523319d",
+    "memory": {
+      "available_gb": 53.96,
+      "total_gb": 119.7,
+      "used_percent": 54.9
+    },
+    "memory_bandwidth_gbps": 273,
+    "notes": [
+      "DGX Spark detected: capacity is large and bandwidth is narrow, so decode is bandwidth-bound. Sparse models and speculative decoding are ranked accordingly."
+    ],
+    "os": {
+      "machine": "aarch64",
+      "name": "Linux",
+      "release": "6.11.0-1014-nvidia",
+      "version": "#14-Ubuntu SMP PREEMPT_DYNAMIC Thu Aug 14 18:27:36 UTC 2025"
+    },
+    "platform_id": "dgx_spark",
+    "real_execution_ready": true,
+    "simulated": false,
+    "stack": {
+      "cuda": {
+        "container_runtime": "/usr/bin/docker",
+        "nvcc_path": null,
+        "nvcc_version": null,
+        "torch": null
+      },
+      "engines_available": [
+        "ollama",
+        "vllm"
+      ],
+      "metal": {
+        "available": false,
+        "unified_memory": false
+      },
+      "platform": "dgx_spark",
+      "platform_detection": {
+        "architecture": "aarch64",
+        "device_tree_model": null,
+        "gpu_names": [
+          "NVIDIA GB10"
+        ],
+        "matched_on": "gpu_name contains 'GB10'"
+      }
+    },
+    "unified_memory": true
+  },
+  "managed_by_localpilot": false,
+  "max_new_tokens": 768,
+  "minimum_gain": 0.1,
+  "quality_policy": "every document exact, no failed or truncated response",
+  "relative_latency_reduction": 0.6786457417626968,
+  "repeats": 2,
+  "response_format": {
+    "json_schema": {
+      "name": "invoice_fields",
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "invoice_number": {
+            "type": "string"
+          },
+          "issue_date": {
+            "type": "string"
+          },
+          "purchase_order": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "seller": {
+            "type": "string"
+          },
+          "total_usd": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoice_number",
+          "issue_date",
+          "total_usd",
+          "seller",
+          "purchase_order"
+        ],
+        "type": "object"
+      },
+      "strict": true
+    },
+    "type": "json_schema"
+  },
+  "samples": [
+    {
+      "arm": "baseline",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 0,
+      "output_tokens": 211,
+      "prompt_id": "invoice-01",
+      "repeat": 0,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 10567.45,
+      "ttft_ms": 96.13
+    },
+    {
+      "arm": "json_schema",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 1,
+      "output_tokens": 58,
+      "prompt_id": "invoice-01",
+      "repeat": 0,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 2938.03,
+      "ttft_ms": 95.84
+    },
+    {
+      "arm": "json_schema",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 2,
+      "output_tokens": 65,
+      "prompt_id": "invoice-02",
+      "repeat": 0,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 3276.83,
+      "ttft_ms": 95.04
+    },
+    {
+      "arm": "baseline",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 3,
+      "output_tokens": 325,
+      "prompt_id": "invoice-02",
+      "repeat": 0,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 16235.7,
+      "ttft_ms": 96.58
+    },
+    {
+      "arm": "baseline",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 4,
+      "output_tokens": 152,
+      "prompt_id": "invoice-03",
+      "repeat": 0,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 7615.7,
+      "ttft_ms": 96.53
+    },
+    {
+      "arm": "json_schema",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 5,
+      "output_tokens": 59,
+      "prompt_id": "invoice-03",
+      "repeat": 0,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 2986.62,
+      "ttft_ms": 97.92
+    },
+    {
+      "arm": "json_schema",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 6,
+      "output_tokens": 64,
+      "prompt_id": "invoice-04",
+      "repeat": 0,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 3239.23,
+      "ttft_ms": 97.04
+    },
+    {
+      "arm": "baseline",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 7,
+      "output_tokens": 161,
+      "prompt_id": "invoice-04",
+      "repeat": 0,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 8080.73,
+      "ttft_ms": 98.15
+    },
+    {
+      "arm": "baseline",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 8,
+      "output_tokens": 154,
+      "prompt_id": "invoice-05",
+      "repeat": 0,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 7727.88,
+      "ttft_ms": 97.65
+    },
+    {
+      "arm": "json_schema",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 9,
+      "output_tokens": 60,
+      "prompt_id": "invoice-05",
+      "repeat": 0,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 3042.88,
+      "ttft_ms": 96.09
+    },
+    {
+      "arm": "json_schema",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 10,
+      "output_tokens": 65,
+      "prompt_id": "invoice-06",
+      "repeat": 0,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 3292.82,
+      "ttft_ms": 96.5
+    },
+    {
+      "arm": "baseline",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 11,
+      "output_tokens": 163,
+      "prompt_id": "invoice-06",
+      "repeat": 0,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 8194.18,
+      "ttft_ms": 97.89
+    },
+    {
+      "arm": "json_schema",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 12,
+      "output_tokens": 58,
+      "prompt_id": "invoice-01",
+      "repeat": 1,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 2944.96,
+      "ttft_ms": 96.2
+    },
+    {
+      "arm": "baseline",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 13,
+      "output_tokens": 211,
+      "prompt_id": "invoice-01",
+      "repeat": 1,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 10628.16,
+      "ttft_ms": 96.57
+    },
+    {
+      "arm": "baseline",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 14,
+      "output_tokens": 325,
+      "prompt_id": "invoice-02",
+      "repeat": 1,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 16328.99,
+      "ttft_ms": 96.85
+    },
+    {
+      "arm": "json_schema",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 15,
+      "output_tokens": 65,
+      "prompt_id": "invoice-02",
+      "repeat": 1,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 3307.3,
+      "ttft_ms": 97.54
+    },
+    {
+      "arm": "json_schema",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 16,
+      "output_tokens": 59,
+      "prompt_id": "invoice-03",
+      "repeat": 1,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 3002.32,
+      "ttft_ms": 97.88
+    },
+    {
+      "arm": "baseline",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 17,
+      "output_tokens": 152,
+      "prompt_id": "invoice-03",
+      "repeat": 1,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 7663.75,
+      "ttft_ms": 98.17
+    },
+    {
+      "arm": "baseline",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 18,
+      "output_tokens": 161,
+      "prompt_id": "invoice-04",
+      "repeat": 1,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 8106.53,
+      "ttft_ms": 96.85
+    },
+    {
+      "arm": "json_schema",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 19,
+      "output_tokens": 64,
+      "prompt_id": "invoice-04",
+      "repeat": 1,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 3250.05,
+      "ttft_ms": 96.08
+    },
+    {
+      "arm": "json_schema",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 20,
+      "output_tokens": 60,
+      "prompt_id": "invoice-05",
+      "repeat": 1,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 3056.84,
+      "ttft_ms": 98.77
+    },
+    {
+      "arm": "baseline",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 21,
+      "output_tokens": 154,
+      "prompt_id": "invoice-05",
+      "repeat": 1,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 7772.18,
+      "ttft_ms": 97.63
+    },
+    {
+      "arm": "baseline",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 22,
+      "output_tokens": 163,
+      "prompt_id": "invoice-06",
+      "repeat": 1,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 8246.95,
+      "ttft_ms": 97.78
+    },
+    {
+      "arm": "json_schema",
+      "completed": true,
+      "document_exact": true,
+      "field_matches": {
+        "invoice_number": true,
+        "issue_date": true,
+        "purchase_order": true,
+        "seller": true,
+        "total_usd": true
+      },
+      "fields_correct": 5,
+      "fields_total": 5,
+      "finish_reason": "stop",
+      "json_valid": true,
+      "order": 23,
+      "output_tokens": 65,
+      "prompt_id": "invoice-06",
+      "repeat": 1,
+      "request_ok": true,
+      "token_count_source": "engine_usage",
+      "total_ms": 3314.62,
+      "ttft_ms": 97.18
+    }
+  ],
+  "scope": "selection among two request strategies; no deployment change",
+  "selected_strategy": "json_schema",
+  "server_after": {
+    "base_url": "http://127.0.0.1:8000",
+    "block_size": 16,
+    "cache_dtype": "auto",
+    "gpu_memory_utilization": 0.5,
+    "introspected": true,
+    "kv_capacity_tokens": 298608,
+    "max_model_len": 8192,
+    "num_gpu_blocks": 18663,
+    "prefix_cache_hit_rate": 0.8124,
+    "served_models": [
+      "step3-vl-10b-fp8"
+    ]
+  },
+  "server_before": {
+    "base_url": "http://127.0.0.1:8000",
+    "block_size": 16,
+    "cache_dtype": "auto",
+    "gpu_memory_utilization": 0.5,
+    "introspected": true,
+    "kv_capacity_tokens": 298608,
+    "max_model_len": 8192,
+    "num_gpu_blocks": 18663,
+    "prefix_cache_hit_rate": 0.5473,
+    "served_models": [
+      "step3-vl-10b-fp8"
+    ]
+  },
+  "started_at": "2026-09-21T13:42:19.581306+00:00",
+  "status": "COMPLETED",
+  "summaries": {
+    "baseline": {
+      "complete_rate": 1.0,
+      "document_accuracy": 1.0,
+      "documents": 12,
+      "field_accuracy": 1.0,
+      "fields_correct": 60,
+      "fields_total": 60,
+      "json_valid_rate": 1.0,
+      "mean_output_tokens": 194.33333333333334,
+      "mean_total_ms": 9764.016666666666,
+      "mean_ttft_ms": 97.23166666666667,
+      "method": "json_exact_fields_v1",
+      "request_failures": 0
+    },
+    "json_schema": {
+      "complete_rate": 1.0,
+      "document_accuracy": 1.0,
+      "documents": 12,
+      "field_accuracy": 1.0,
+      "fields_correct": 60,
+      "fields_total": 60,
+      "json_valid_rate": 1.0,
+      "mean_output_tokens": 61.833333333333336,
+      "mean_total_ms": 3137.7083333333335,
+      "mean_ttft_ms": 96.84,
+      "method": "json_exact_fields_v1",
+      "request_failures": 0
+    }
+  },
+  "warmup": [
+    {
+      "arm": "baseline",
+      "finish_reason": "stop",
+      "ok": true,
+      "total_ms": 10508.148386026733
+    },
+    {
+      "arm": "json_schema",
+      "finish_reason": "stop",
+      "ok": true,
+      "total_ms": 2928.9571099798195
+    }
+  ]
+}
