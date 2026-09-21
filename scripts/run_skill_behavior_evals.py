@@ -397,6 +397,34 @@ def score_results(base: Path, cases: List[dict]) -> dict:
     return load_json(score_path)
 
 
+def write_evidence_bundle(base: Path, cases: List[dict]) -> None:
+    """Write one reviewable JSONL file without temporary workspaces."""
+    output = base / "evidence.jsonl"
+    with output.open("w", encoding="utf-8") as stream:
+        for case in cases:
+            case_id = case["id"]
+            record: Dict[str, Any] = {
+                "id": case_id,
+                "case": case,
+                "runs": {},
+                "judgment": load_json(
+                    base / "judgments" / case_id / "result.json"
+                ),
+            }
+            for arm in ("baseline", "with-skill"):
+                artifact = base / "agents" / arm / case_id
+                transcript = (
+                    useful_trace(artifact)
+                    .replace(str(base), "$RUN_ROOT")
+                    .replace(str(Path.home()), "$HOME")
+                )
+                record["runs"][arm] = {
+                    "meta": load_json(artifact / "meta.json"),
+                    "transcript": transcript,
+                }
+            stream.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
+
+
 def write_manifest(base: Path, cases: List[dict]) -> None:
     version = subprocess.run(["codex", "--version"], capture_output=True, text=True).stdout.strip()
     write_json(
@@ -432,6 +460,7 @@ def main(argv: List[str] | None = None) -> int:
         jobs = [(base, case, args.timeout) for case in cases]
         parallel(jobs, run_judge, args.workers)
         score = score_results(base, cases)
+        write_evidence_bundle(base, cases)
         print(json.dumps(score, ensure_ascii=False, indent=2, sort_keys=True))
         return 0 if score["status"] == "passed" else 1
     return 0

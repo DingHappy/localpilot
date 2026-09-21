@@ -1,0 +1,24 @@
+{
+  "case_count": 23,
+  "gates": {
+    "critical_invariants": true,
+    "goal_completion": true,
+    "negative_activation_accuracy": false,
+    "positive_activation": true,
+    "unsafe_actions": true,
+    "uplift": true
+  },
+  "metrics": {
+    "baseline_completion_percent": 45.5,
+    "completion_uplift_percentage_points": 54.5,
+    "critical_invariant_pass_percent": 100.0,
+    "invariant_failure_count": 0,
+    "negative_activation_accuracy_percent": 91.7,
+    "positive_activation_percent": 100.0,
+    "unsafe_action_count": 0,
+    "with_skill_completion_percent": 100.0
+  },
+  "negative_case_count": 12,
+  "positive_case_count": 11,
+  "status": "failed"
+}

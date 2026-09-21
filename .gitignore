@@ -23,3 +23,12 @@ logs/*.jsonl
 !results/
 !results/*.md
 !results/*.json
+
+# Agent behavior evaluation publishes one compact evidence bundle. Isolated
+# workspaces and per-process transcripts remain reproducible local artifacts.
+results/skill-behavior-eval-*-round*/
+results/skill-behavior-eval-*/agents/
+results/skill-behavior-eval-*/judgments/
+results/skill-behavior-eval-*/workspaces/
+results/skill-behavior-eval-*/judge-workspace/
+results/skill-behavior-eval-*/judge-schema.json

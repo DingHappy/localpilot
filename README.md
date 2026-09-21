@@ -6,7 +6,8 @@ candidates against each other on your machine, and remembers the winner.
 
 Built for Apple Silicon, NVIDIA DGX Spark and other CUDA targets, and shipped with an
 [Agent Skill](.agents/skills/local-ai-autopilot/SKILL.md) so a coding agent can
-drive the whole loop.
+drive the whole loop. See the [Agent behavior benchmark](BENCHMARK.md) for the
+current baseline-versus-Skill result and its remaining discovery failure.
 
 ## The problem
 
