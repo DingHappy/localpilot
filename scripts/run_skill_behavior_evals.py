@@ -100,7 +100,7 @@ elif command in {"autopilot", "stage"}:
         "rejected": [({"model_id": "fixture-text", "gate": "required_modalities", "reason": "lacks image and document support"} if changed_modality else {"model_id": "fixture-too-large", "gate": "memory", "reason": "requires 348 GB"})],
     }))
 elif command == "status":
-    print(json.dumps({"status": "READY", "profile_key": "fixture-profile", "simulated": simulated}))
+    print(json.dumps({"status": "READY", "profile_key": profile_key, "simulated": simulated}))
 elif command == "benchmark":
     print(json.dumps({"simulated": simulated, "ttft_ms": 125, "throughput_tokens_s": 23, "peak_memory_gb": 20, "raw": {"peak_memory_source": "planner_estimate_no_readable_source"}}))
 elif command in {"reconcile", "watch"}:
@@ -207,7 +207,7 @@ def fixture_files(workspace: Path, case: dict) -> None:
         )
     if case["id"] == "local-ai-autopilot-pos-requirement-change-concurrency":
         write_json(
-            workspace / "current_profile.json",
+            workspace / "previous_profile.json",
             {"context_length": 8192, "concurrency": 1, "profile_key": "old-single-user"},
         )
 

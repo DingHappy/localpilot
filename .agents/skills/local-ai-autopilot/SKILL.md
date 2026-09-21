@@ -1,6 +1,6 @@
 ---
 name: local-ai-autopilot
-description: Turn an Apple Silicon or single-node NVIDIA/CUDA inference goal into an evidence-labelled serving profile with LocalPilot, locally or over SSH. Use when choosing or validating model, engine, precision, context, concurrency, acceptance, or re-planning decisions on that target. Attempt real validation when ready and distinguish measured, estimated, and simulated evidence. Do not activate for hosted API selection, training or fine-tuning, software or driver installation, hardware purchase comparisons, generic accelerator troubleshooting, CPU-only or AMD/ROCm targets, Jetson workflows, multi-node topology or cluster scheduling, or cloud deployment.
+description: Turn an Apple Silicon or single-node NVIDIA/CUDA inference goal into an evidence-labelled serving profile with LocalPilot, locally or over SSH. Use when choosing or validating model, engine, precision, context, concurrency, acceptance, or re-planning decisions on that target. Attempt real validation when ready and distinguish measured, estimated, and simulated evidence. Do not activate for hosted API selection, training or fine-tuning, software or driver installation, Dockerfile or container authoring, hardware purchase comparisons, generic accelerator troubleshooting, CPU-only or AMD/ROCm targets, Jetson workflows, multi-node topology or cluster scheduling, or cloud deployment.
 ---
 
 # Local AI Autopilot
