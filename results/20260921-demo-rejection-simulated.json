@@ -1,0 +1,1120 @@
+{
+  "run_id": "b12ba729-b44d-4a8d-83b4-87d5df6240b2",
+  "intent": {
+    "task": "chat",
+    "privacy": "local_only",
+    "priority": "balanced",
+    "quality": "high",
+    "context_length": 8192,
+    "concurrency": 1,
+    "preferred_language": [
+      "en"
+    ],
+    "capabilities": [],
+    "modalities": [
+      "text"
+    ],
+    "raw_text": "local chat"
+  },
+  "hardware": {
+    "os": {
+      "name": "Darwin",
+      "release": "25.6.0",
+      "version": "Darwin Kernel Version 25.6.0: Fri Jul 31 19:18:49 PDT 2026; root:xnu-12377.161.14~5/RELEASE_ARM64_T6000",
+      "machine": "arm64"
+    },
+    "cpu": {
+      "model": "Apple Silicon (arm64)",
+      "architecture": "arm64",
+      "logical_cores": 10,
+      "workload": {
+        "load_average": [
+          6.8916015625,
+          7.0546875,
+          6.9755859375
+        ],
+        "usage_percent": null
+      }
+    },
+    "accelerator": {
+      "detected": true,
+      "source": "simulated",
+      "driver_version": null,
+      "device_count": 1,
+      "names": [
+        "NVIDIA DGX Spark (GB10)"
+      ],
+      "memory_total_gb": 128.0,
+      "compute_capability": "12.1",
+      "unified": true
+    },
+    "memory": {
+      "total_gb": 128.0,
+      "available_gb": 120.0,
+      "used_percent": null,
+      "simulated": true
+    },
+    "disk": {
+      "total_gb": 926.35,
+      "free_gb": 316.19
+    },
+    "stack": {
+      "cuda": {
+        "nvcc_version": null,
+        "simulated": true
+      },
+      "platform": "dgx_spark",
+      "engines_available": [
+        "llamacpp",
+        "nim",
+        "ollama",
+        "sglang",
+        "transformers",
+        "trtllm",
+        "vllm"
+      ]
+    },
+    "engines": {
+      "vllm": {
+        "engine_id": "vllm",
+        "kind": "server",
+        "python_module": false,
+        "binary_path": null,
+        "available": true,
+        "source": null,
+        "local_images": [],
+        "detail": "docker is installed but no image matching ['nvcr.io/nvidia/vllm', 'vllm'] is present locally",
+        "simulated": true
+      },
+      "trtllm": {
+        "engine_id": "trtllm",
+        "kind": "server",
+        "python_module": false,
+        "binary_path": null,
+        "available": true,
+        "source": null,
+        "local_images": [],
+        "detail": "docker is installed but no image matching ['nvcr.io/nvidia/tensorrt-llm', 'tensorrt_llm', 'trtllm'] is present locally",
+        "simulated": true
+      },
+      "sglang": {
+        "engine_id": "sglang",
+        "kind": "server",
+        "python_module": false,
+        "binary_path": null,
+        "available": true,
+        "source": null,
+        "local_images": [],
+        "detail": "docker is installed but no image matching ['lmsysorg/sglang', 'sglang'] is present locally",
+        "simulated": true
+      },
+      "nim": {
+        "engine_id": "nim",
+        "kind": "container",
+        "python_module": null,
+        "binary_path": "/usr/local/bin/docker",
+        "available": true,
+        "source": null,
+        "local_images": [],
+        "detail": "docker is installed but no image matching ['nvcr.io/nim/'] is present locally",
+        "simulated": true
+      },
+      "llamacpp": {
+        "engine_id": "llamacpp",
+        "kind": "server",
+        "python_module": null,
+        "binary_path": null,
+        "available": true,
+        "source": null,
+        "simulated": true
+      },
+      "ollama": {
+        "engine_id": "ollama",
+        "kind": "server",
+        "python_module": null,
+        "binary_path": "/usr/local/bin/ollama",
+        "available": true,
+        "source": "host",
+        "base_url": "http://127.0.0.1:11434",
+        "detail": "http://127.0.0.1:11434 is configured but not answering /api/version",
+        "simulated": true
+      },
+      "transformers": {
+        "engine_id": "transformers",
+        "kind": "library",
+        "python_module": false,
+        "binary_path": null,
+        "available": true,
+        "source": null,
+        "simulated": true
+      }
+    },
+    "available_devices": [
+      "CUDA",
+      "CPU"
+    ],
+    "devices": [
+      {
+        "id": "CUDA",
+        "kind": "gpu",
+        "name": "SIMULATED NVIDIA DGX Spark (GB10)",
+        "available": true,
+        "properties": {
+          "memory_total_gb": 128.0,
+          "compute_capability": "12.1",
+          "utilization_percent": null
+        }
+      },
+      {
+        "id": "CPU",
+        "kind": "cpu",
+        "name": "SIMULATED Grace CPU",
+        "available": true,
+        "properties": {}
+      }
+    ],
+    "fingerprint": "c8918251f77693fab93822ef5cb2fef49de11fb0d179cc89cabb68604d5b425a",
+    "platform_id": "dgx_spark",
+    "unified_memory": true,
+    "memory_bandwidth_gbps": 273,
+    "simulated": true,
+    "real_execution_ready": false,
+    "notes": [
+      "Development simulation only; every number is modelled, not measured.",
+      "Simulating platform 'dgx_spark' with 128.0 GB unified memory at 273 GB/s."
+    ]
+  },
+  "candidates": [
+    {
+      "candidate": {
+        "candidate_id": "nemotron-3.5-lightning-30b-a3b-nvfp4-vllm-nvfp4-spec",
+        "model_id": "nemotron-3.5-lightning-30b-a3b-nvfp4",
+        "source_id": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4",
+        "engine": "vllm",
+        "device": "CUDA",
+        "precision": "NVFP4",
+        "context_length": 8192,
+        "runtime": "mock",
+        "expected_memory_gb": 22.98,
+        "quality_score": 0.88,
+        "reason": "vLLM ranks #1 for balanced; 3B of 30B parameters are read per token; speculative decoding trades compute for bandwidth; 23.0 GB of a 89.6 GB budget",
+        "confidence": 0.77,
+        "simulated": true,
+        "concurrency": 1,
+        "kv_cache_dtype": "auto",
+        "active_parameter_count_b": 3.0,
+        "parameter_count_b": 30.0,
+        "memory_estimate": {
+          "weights_gb": 21.37,
+          "kv_cache_gb": 0.11,
+          "activation_overhead_gb": 1.5,
+          "total_gb": 22.98,
+          "budget_gb": 89.6,
+          "fits": true,
+          "detail": "23.0 GB of a 89.6 GB budget"
+        },
+        "model_path": null,
+        "runtime_config": {
+          "max_num_seqs": 1,
+          "gpu_memory_utilization": 0.7,
+          "kv_cache_dtype": "auto",
+          "enable_prefix_caching": true,
+          "speculative": {
+            "draft_source_id": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-NVFP4-DSpark",
+            "num_speculative_tokens": 3
+          }
+        },
+        "knobs": {
+          "kv_cache_dtype": "auto",
+          "speculative_decoding": true,
+          "gpu_memory_utilization": 0.7,
+          "max_num_seqs": 1,
+          "enable_prefix_caching": true,
+          "num_speculative_tokens": 3,
+          "concurrency": 1
+        },
+        "fallback_of": null,
+        "recovery_action": null
+      },
+      "status": "success",
+      "steps": [
+        {
+          "name": "environment_check",
+          "status": "success",
+          "message": ""
+        },
+        {
+          "name": "model_load",
+          "status": "success",
+          "message": ""
+        },
+        {
+          "name": "model_start",
+          "status": "success",
+          "message": ""
+        },
+        {
+          "name": "health_check",
+          "status": "success",
+          "message": ""
+        },
+        {
+          "name": "benchmark",
+          "status": "success",
+          "message": ""
+        },
+        {
+          "name": "quality_grading",
+          "status": "success",
+          "message": "rubric grading applied"
+        }
+      ],
+      "benchmark": {
+        "ttft_ms": 76.42,
+        "tpot_ms": 4.97,
+        "throughput_tokens_s": 201.35,
+        "total_latency_ms": 1348.07,
+        "peak_memory_gb": 23.77,
+        "cpu_usage_percent": null,
+        "stability": 1.0,
+        "quality": 0.78,
+        "runs": 3,
+        "warmup_runs": 1,
+        "simulated": true,
+        "raw": {
+          "label": "SIMULATED_NOT_A_HARDWARE_BENCHMARK",
+          "engine_modelled": "vllm",
+          "model": "roofline: bandwidth / active bytes per token",
+          "assumed_bandwidth_gbps": 273.0,
+          "benchmark_config_sha256": "90f9cf328fb813bcfa4837140b1a88412ec1af725bce7b3c186d2d487d2a2c37",
+          "benchmark_dataset_id": null,
+          "max_new_tokens": 256,
+          "acceptance": {
+            "objective": "highest_quality",
+            "min_quality": 0.5,
+            "max_total_latency_ms": 1
+          },
+          "quality_detail": "rubric grading applied",
+          "quality_samples": [
+            {
+              "prompt_id": "local-chat-smoke",
+              "keyword_hit": true,
+              "answer": "The response is generated entirely on the local machine, on this device's own accelerator.",
+              "expected_terms": [
+                "local",
+                "device",
+                "computer",
+                "machine"
+              ],
+              "judge": {
+                "correctness": 1.0,
+                "completeness": 0.56,
+                "actionability": 0.4,
+                "score": 0.653,
+                "note": "simulated rubric",
+                "source": "simulated"
+              }
+            },
+            {
+              "prompt_id": "chat-reasoning",
+              "keyword_hit": true,
+              "answer": "About 102 GB of memory is left for the KV cache.",
+              "expected_terms": [
+                "102",
+                "100",
+                "gb"
+              ],
+              "judge": {
+                "correctness": 1.0,
+                "completeness": 0.44,
+                "actionability": 0.4,
+                "score": 0.613,
+                "note": "simulated rubric",
+                "source": "simulated"
+              }
+            }
+          ]
+        },
+        "ttft_p95_ms": 77.21,
+        "concurrency": 1,
+        "aggregate_throughput_tokens_s": 202.53,
+        "quality_keyword": 1.0,
+        "quality_judge": 0.633,
+        "decode_bandwidth_gbps": 341.77,
+        "bandwidth_utilization": 1.252
+      },
+      "score": null,
+      "score_components": {},
+      "gate_failures": [
+        "complete response 1348.07 ms exceeds gate 1.00 ms"
+      ],
+      "error": null
+    },
+    {
+      "candidate": {
+        "candidate_id": "nemotron-3-nano-30b-a3b-nvfp4-vllm-nvfp4",
+        "model_id": "nemotron-3-nano-30b-a3b-nvfp4",
+        "source_id": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-NVFP4",
+        "engine": "vllm",
+        "device": "CUDA",
+        "precision": "NVFP4",
+        "context_length": 8192,
+        "runtime": "mock",
+        "expected_memory_gb": 19.62,
+        "quality_score": 0.84,
+        "reason": "vLLM ranks #1 for balanced; 3B of 30B parameters are read per token; 19.6 GB of a 89.6 GB budget",
+        "confidence": 0.85,
+        "simulated": true,
+        "concurrency": 1,
+        "kv_cache_dtype": "auto",
+        "active_parameter_count_b": 3.0,
+        "parameter_count_b": 30.0,
+        "memory_estimate": {
+          "weights_gb": 18.01,
+          "kv_cache_gb": 0.11,
+          "activation_overhead_gb": 1.5,
+          "total_gb": 19.62,
+          "budget_gb": 89.6,
+          "fits": true,
+          "detail": "19.6 GB of a 89.6 GB budget"
+        },
+        "model_path": null,
+        "runtime_config": {
+          "max_num_seqs": 1,
+          "gpu_memory_utilization": 0.7,
+          "kv_cache_dtype": "auto",
+          "enable_prefix_caching": true
+        },
+        "knobs": {
+          "kv_cache_dtype": "auto",
+          "speculative_decoding": false,
+          "gpu_memory_utilization": 0.7,
+          "max_num_seqs": 1,
+          "enable_prefix_caching": true,
+          "num_speculative_tokens": 3,
+          "concurrency": 1
+        },
+        "fallback_of": null,
+        "recovery_action": null
+      },
+      "status": "success",
+      "steps": [
+        {
+          "name": "environment_check",
+          "status": "success",
+          "message": ""
+        },
+        {
+          "name": "model_load",
+          "status": "success",
+          "message": ""
+        },
+        {
+          "name": "model_start",
+          "status": "success",
+          "message": ""
+        },
+        {
+          "name": "health_check",
+          "status": "success",
+          "message": ""
+        },
+        {
+          "name": "benchmark",
+          "status": "success",
+          "message": ""
+        },
+        {
+          "name": "quality_grading",
+          "status": "success",
+          "message": "rubric grading applied"
+        }
+      ],
+      "benchmark": {
+        "ttft_ms": 75.07,
+        "tpot_ms": 8.78,
+        "throughput_tokens_s": 113.88,
+        "total_latency_ms": 2323.56,
+        "peak_memory_gb": 20.85,
+        "cpu_usage_percent": null,
+        "stability": 1.0,
+        "quality": 0.78,
+        "runs": 3,
+        "warmup_runs": 1,
+        "simulated": true,
+        "raw": {
+          "label": "SIMULATED_NOT_A_HARDWARE_BENCHMARK",
+          "engine_modelled": "vllm",
+          "model": "roofline: bandwidth / active bytes per token",
+          "assumed_bandwidth_gbps": 273.0,
+          "benchmark_config_sha256": "90f9cf328fb813bcfa4837140b1a88412ec1af725bce7b3c186d2d487d2a2c37",
+          "benchmark_dataset_id": null,
+          "max_new_tokens": 256,
+          "acceptance": {
+            "objective": "highest_quality",
+            "min_quality": 0.5,
+            "max_total_latency_ms": 1
+          },
+          "quality_detail": "rubric grading applied",
+          "quality_samples": [
+            {
+              "prompt_id": "local-chat-smoke",
+              "keyword_hit": true,
+              "answer": "The response is generated entirely on the local machine, on this device's own accelerator.",
+              "expected_terms": [
+                "local",
+                "device",
+                "computer",
+                "machine"
+              ],
+              "judge": {
+                "correctness": 1.0,
+                "completeness": 0.56,
+                "actionability": 0.4,
+                "score": 0.653,
+                "note": "simulated rubric",
+                "source": "simulated"
+              }
+            },
+            {
+              "prompt_id": "chat-reasoning",
+              "keyword_hit": true,
+              "answer": "About 102 GB of memory is left for the KV cache.",
+              "expected_terms": [
+                "102",
+                "100",
+                "gb"
+              ],
+              "judge": {
+                "correctness": 1.0,
+                "completeness": 0.44,
+                "actionability": 0.4,
+                "score": 0.613,
+                "note": "simulated rubric",
+                "source": "simulated"
+              }
+            }
+          ]
+        },
+        "ttft_p95_ms": 76.37,
+        "concurrency": 1,
+        "aggregate_throughput_tokens_s": 112.52,
+        "quality_keyword": 1.0,
+        "quality_judge": 0.633,
+        "decode_bandwidth_gbps": 189.87,
+        "bandwidth_utilization": 0.696
+      },
+      "score": null,
+      "score_components": {},
+      "gate_failures": [
+        "complete response 2323.56 ms exceeds gate 1.00 ms"
+      ],
+      "error": null
+    },
+    {
+      "candidate": {
+        "candidate_id": "nemotron-3-super-120b-a12b-nvfp4-vllm-nvfp4",
+        "model_id": "nemotron-3-super-120b-a12b-nvfp4",
+        "source_id": "nvidia/NVIDIA-Nemotron-3-Super-120B-A12B-NVFP4",
+        "engine": "vllm",
+        "device": "CUDA",
+        "precision": "NVFP4",
+        "context_length": 8192,
+        "runtime": "mock",
+        "expected_memory_gb": 79.46,
+        "quality_score": 0.93,
+        "reason": "vLLM ranks #1 for balanced; 12B of 120B parameters are read per token; 79.5 GB of a 89.6 GB budget",
+        "confidence": 0.85,
+        "simulated": true,
+        "concurrency": 1,
+        "kv_cache_dtype": "auto",
+        "active_parameter_count_b": 12.0,
+        "parameter_count_b": 120.0,
+        "memory_estimate": {
+          "weights_gb": 74.8,
+          "kv_cache_gb": 0.17,
+          "activation_overhead_gb": 4.49,
+          "total_gb": 79.46,
+          "budget_gb": 89.6,
+          "fits": true,
+          "detail": "79.5 GB of a 89.6 GB budget"
+        },
+        "model_path": null,
+        "runtime_config": {
+          "max_num_seqs": 1,
+          "gpu_memory_utilization": 0.7,
+          "kv_cache_dtype": "auto",
+          "enable_prefix_caching": true
+        },
+        "knobs": {
+          "kv_cache_dtype": "auto",
+          "speculative_decoding": false,
+          "gpu_memory_utilization": 0.7,
+          "max_num_seqs": 1,
+          "enable_prefix_caching": true,
+          "num_speculative_tokens": 3,
+          "concurrency": 1
+        },
+        "fallback_of": null,
+        "recovery_action": null
+      },
+      "status": "success",
+      "steps": [
+        {
+          "name": "environment_check",
+          "status": "success",
+          "message": ""
+        },
+        {
+          "name": "model_load",
+          "status": "success",
+          "message": ""
+        },
+        {
+          "name": "model_start",
+          "status": "success",
+          "message": ""
+        },
+        {
+          "name": "health_check",
+          "status": "success",
+          "message": ""
+        },
+        {
+          "name": "benchmark",
+          "status": "success",
+          "message": ""
+        },
+        {
+          "name": "quality_grading",
+          "status": "success",
+          "message": "rubric grading applied"
+        }
+      ],
+      "benchmark": {
+        "ttft_ms": 75.0,
+        "tpot_ms": 35.1,
+        "throughput_tokens_s": 28.49,
+        "total_latency_ms": 9060.23,
+        "peak_memory_gb": 84.81,
+        "cpu_usage_percent": null,
+        "stability": 1.0,
+        "quality": 0.78,
+        "runs": 3,
+        "warmup_runs": 1,
+        "simulated": true,
+        "raw": {
+          "label": "SIMULATED_NOT_A_HARDWARE_BENCHMARK",
+          "engine_modelled": "vllm",
+          "model": "roofline: bandwidth / active bytes per token",
+          "assumed_bandwidth_gbps": 273.0,
+          "benchmark_config_sha256": "90f9cf328fb813bcfa4837140b1a88412ec1af725bce7b3c186d2d487d2a2c37",
+          "benchmark_dataset_id": null,
+          "max_new_tokens": 256,
+          "acceptance": {
+            "objective": "highest_quality",
+            "min_quality": 0.5,
+            "max_total_latency_ms": 1
+          },
+          "quality_detail": "rubric grading applied",
+          "quality_samples": [
+            {
+              "prompt_id": "local-chat-smoke",
+              "keyword_hit": true,
+              "answer": "The response is generated entirely on the local machine, on this device's own accelerator.",
+              "expected_terms": [
+                "local",
+                "device",
+                "computer",
+                "machine"
+              ],
+              "judge": {
+                "correctness": 1.0,
+                "completeness": 0.56,
+                "actionability": 0.4,
+                "score": 0.653,
+                "note": "simulated rubric",
+                "source": "simulated"
+              }
+            },
+            {
+              "prompt_id": "chat-reasoning",
+              "keyword_hit": true,
+              "answer": "About 102 GB of memory is left for the KV cache.",
+              "expected_terms": [
+                "102",
+                "100",
+                "gb"
+              ],
+              "judge": {
+                "correctness": 1.0,
+                "completeness": 0.44,
+                "actionability": 0.4,
+                "score": 0.613,
+                "note": "simulated rubric",
+                "source": "simulated"
+              }
+            }
+          ]
+        },
+        "ttft_p95_ms": 75.23,
+        "concurrency": 1,
+        "aggregate_throughput_tokens_s": 28.13,
+        "quality_keyword": 1.0,
+        "quality_judge": 0.633,
+        "decode_bandwidth_gbps": 189.87,
+        "bandwidth_utilization": 0.696
+      },
+      "score": null,
+      "score_components": {},
+      "gate_failures": [
+        "complete response 9060.23 ms exceeds gate 1.00 ms"
+      ],
+      "error": null
+    },
+    {
+      "candidate": {
+        "candidate_id": "nemotron-3.5-lightning-30b-a3b-bf16-vllm-bf16",
+        "model_id": "nemotron-3.5-lightning-30b-a3b-bf16",
+        "source_id": "nvidia/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-BF16",
+        "engine": "vllm",
+        "device": "CUDA",
+        "precision": "BF16",
+        "context_length": 8192,
+        "runtime": "mock",
+        "expected_memory_gb": 65.1,
+        "quality_score": 0.89,
+        "reason": "vLLM ranks #1 for balanced; 3B of 30B parameters are read per token; 65.1 GB of a 89.6 GB budget",
+        "confidence": 0.85,
+        "simulated": true,
+        "concurrency": 1,
+        "kv_cache_dtype": "auto",
+        "active_parameter_count_b": 3.0,
+        "parameter_count_b": 30.0,
+        "memory_estimate": {
+          "weights_gb": 61.31,
+          "kv_cache_gb": 0.11,
+          "activation_overhead_gb": 3.68,
+          "total_gb": 65.1,
+          "budget_gb": 89.6,
+          "fits": true,
+          "detail": "65.1 GB of a 89.6 GB budget"
+        },
+        "model_path": null,
+        "runtime_config": {
+          "max_num_seqs": 1,
+          "gpu_memory_utilization": 0.7,
+          "kv_cache_dtype": "auto",
+          "enable_prefix_caching": true
+        },
+        "knobs": {
+          "kv_cache_dtype": "auto",
+          "speculative_decoding": false,
+          "gpu_memory_utilization": 0.7,
+          "max_num_seqs": 1,
+          "enable_prefix_caching": true,
+          "num_speculative_tokens": 3,
+          "concurrency": 1
+        },
+        "fallback_of": null,
+        "recovery_action": null
+      },
+      "status": "success",
+      "steps": [
+        {
+          "name": "environment_check",
+          "status": "success",
+          "message": ""
+        },
+        {
+          "name": "model_load",
+          "status": "success",
+          "message": ""
+        },
+        {
+          "name": "model_start",
+          "status": "success",
+          "message": ""
+        },
+        {
+          "name": "health_check",
+          "status": "success",
+          "message": ""
+        },
+        {
+          "name": "benchmark",
+          "status": "success",
+          "message": ""
+        },
+        {
+          "name": "quality_grading",
+          "status": "success",
+          "message": "rubric grading applied"
+        }
+      ],
+      "benchmark": {
+        "ttft_ms": 76.4,
+        "tpot_ms": 31.76,
+        "throughput_tokens_s": 31.49,
+        "total_latency_ms": 8213.27,
+        "peak_memory_gb": 68.62,
+        "cpu_usage_percent": null,
+        "stability": 1.0,
+        "quality": 0.78,
+        "runs": 3,
+        "warmup_runs": 1,
+        "simulated": true,
+        "raw": {
+          "label": "SIMULATED_NOT_A_HARDWARE_BENCHMARK",
+          "engine_modelled": "vllm",
+          "model": "roofline: bandwidth / active bytes per token",
+          "assumed_bandwidth_gbps": 273.0,
+          "benchmark_config_sha256": "90f9cf328fb813bcfa4837140b1a88412ec1af725bce7b3c186d2d487d2a2c37",
+          "benchmark_dataset_id": null,
+          "max_new_tokens": 256,
+          "acceptance": {
+            "objective": "highest_quality",
+            "min_quality": 0.5,
+            "max_total_latency_ms": 1
+          },
+          "quality_detail": "rubric grading applied",
+          "quality_samples": [
+            {
+              "prompt_id": "local-chat-smoke",
+              "keyword_hit": true,
+              "answer": "The response is generated entirely on the local machine, on this device's own accelerator.",
+              "expected_terms": [
+                "local",
+                "device",
+                "computer",
+                "machine"
+              ],
+              "judge": {
+                "correctness": 1.0,
+                "completeness": 0.56,
+                "actionability": 0.4,
+                "score": 0.653,
+                "note": "simulated rubric",
+                "source": "simulated"
+              }
+            },
+            {
+              "prompt_id": "chat-reasoning",
+              "keyword_hit": true,
+              "answer": "About 102 GB of memory is left for the KV cache.",
+              "expected_terms": [
+                "102",
+                "100",
+                "gb"
+              ],
+              "judge": {
+                "correctness": 1.0,
+                "completeness": 0.44,
+                "actionability": 0.4,
+                "score": 0.613,
+                "note": "simulated rubric",
+                "source": "simulated"
+              }
+            }
+          ]
+        },
+        "ttft_p95_ms": 78.76,
+        "concurrency": 1,
+        "aggregate_throughput_tokens_s": 31.65,
+        "quality_keyword": 1.0,
+        "quality_judge": 0.633,
+        "decode_bandwidth_gbps": 189.87,
+        "bandwidth_utilization": 0.696
+      },
+      "score": null,
+      "score_components": {},
+      "gate_failures": [
+        "complete response 8213.27 ms exceeds gate 1.00 ms"
+      ],
+      "error": null
+    }
+  ],
+  "best_profile": null,
+  "profile_reused": false,
+  "status": "REJECTED",
+  "error": "No candidate passed optimization gates: nemotron-3.5-lightning-30b-a3b-nvfp4-vllm-nvfp4-spec: complete response 1348.07 ms exceeds gate 1.00 ms; nemotron-3-nano-30b-a3b-nvfp4-vllm-nvfp4: complete response 2323.56 ms exceeds gate 1.00 ms; nemotron-3-super-120b-a12b-nvfp4-vllm-nvfp4: complete response 9060.23 ms exceeds gate 1.00 ms; nemotron-3.5-lightning-30b-a3b-bf16-vllm-bf16: complete response 8213.27 ms exceeds gate 1.00 ms",
+  "acceptance": {
+    "objective": "highest_quality",
+    "min_quality": 0.5,
+    "max_total_latency_ms": 1
+  },
+  "execution_mode": "mock",
+  "warnings": [
+    "SIMULATED: no benchmark ran on real hardware. These numbers are modelled and must not be reported as measurements."
+  ],
+  "agent_trace": [
+    {
+      "agent": "planner",
+      "action": "read_hardware",
+      "status": "success",
+      "detail": "dgx_spark: 128.0 GB unified, 273 GB/s",
+      "data": {
+        "platform_id": "dgx_spark",
+        "unified_memory": true,
+        "engines_available": [
+          "llamacpp",
+          "nim",
+          "ollama",
+          "sglang",
+          "transformers",
+          "trtllm",
+          "vllm"
+        ],
+        "simulated": true
+      }
+    },
+    {
+      "agent": "planner",
+      "action": "reject_model",
+      "status": "rejected",
+      "detail": "nemotron-3-ultra-550b-a55b-nvfp4: needs 348.0 GB but only 89.6 GB is safely available (328.1 GB weights + 0.2 GB KV at 8192 tokens x1)",
+      "data": {
+        "model_id": "nemotron-3-ultra-550b-a55b-nvfp4",
+        "source_id": "nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4",
+        "gate": "memory",
+        "reason": "needs 348.0 GB but only 89.6 GB is safely available (328.1 GB weights + 0.2 GB KV at 8192 tokens x1)"
+      }
+    },
+    {
+      "agent": "planner",
+      "action": "reject_model",
+      "status": "rejected",
+      "detail": "qwen3.8-27b-mlx: needs one of ['METAL'], machine offers ['CPU', 'CUDA']",
+      "data": {
+        "model_id": "qwen3.8-27b-mlx",
+        "source_id": "qwen3.8:27b-mlx",
+        "gate": "device",
+        "reason": "needs one of ['METAL'], machine offers ['CPU', 'CUDA']"
+      }
+    },
+    {
+      "agent": "planner",
+      "action": "reject_model",
+      "status": "rejected",
+      "detail": "step-3.7-flash-nvfp4: needs 129.0 GB but only 89.6 GB is safely available (120.4 GB weights + 1.4 GB KV at 8192 tokens x1)",
+      "data": {
+        "model_id": "step-3.7-flash-nvfp4",
+        "source_id": "stepfun-ai/Step-3.7-Flash-NVFP4",
+        "gate": "memory",
+        "reason": "needs 129.0 GB but only 89.6 GB is safely available (120.4 GB weights + 1.4 GB KV at 8192 tokens x1)"
+      }
+    },
+    {
+      "agent": "planner",
+      "action": "propose_candidate",
+      "status": "success",
+      "detail": "vLLM ranks #1 for balanced; 3B of 30B parameters are read per token; speculative decoding trades compute for bandwidth; 23.0 GB of a 89.6 GB budget",
+      "data": {
+        "candidate_id": "nemotron-3.5-lightning-30b-a3b-nvfp4-vllm-nvfp4-spec",
+        "engine": "vllm",
+        "precision": "NVFP4",
+        "context_length": 8192,
+        "concurrency": 1,
+        "speculative_decoding": true,
+        "expected_memory_gb": 22.98,
+        "roofline_decode_tokens_s": 121.3
+      }
+    },
+    {
+      "agent": "planner",
+      "action": "propose_candidate",
+      "status": "success",
+      "detail": "vLLM ranks #1 for balanced; 3B of 30B parameters are read per token; 19.6 GB of a 89.6 GB budget",
+      "data": {
+        "candidate_id": "nemotron-3-nano-30b-a3b-nvfp4-vllm-nvfp4",
+        "engine": "vllm",
+        "precision": "NVFP4",
+        "context_length": 8192,
+        "concurrency": 1,
+        "speculative_decoding": false,
+        "expected_memory_gb": 19.62,
+        "roofline_decode_tokens_s": 121.3
+      }
+    },
+    {
+      "agent": "planner",
+      "action": "propose_candidate",
+      "status": "success",
+      "detail": "vLLM ranks #1 for balanced; 12B of 120B parameters are read per token; 79.5 GB of a 89.6 GB budget",
+      "data": {
+        "candidate_id": "nemotron-3-super-120b-a12b-nvfp4-vllm-nvfp4",
+        "engine": "vllm",
+        "precision": "NVFP4",
+        "context_length": 8192,
+        "concurrency": 1,
+        "speculative_decoding": false,
+        "expected_memory_gb": 79.46,
+        "roofline_decode_tokens_s": 30.3
+      }
+    },
+    {
+      "agent": "planner",
+      "action": "propose_candidate",
+      "status": "success",
+      "detail": "vLLM ranks #1 for balanced; 3B of 30B parameters are read per token; 65.1 GB of a 89.6 GB budget",
+      "data": {
+        "candidate_id": "nemotron-3.5-lightning-30b-a3b-bf16-vllm-bf16",
+        "engine": "vllm",
+        "precision": "BF16",
+        "context_length": 8192,
+        "concurrency": 1,
+        "speculative_decoding": false,
+        "expected_memory_gb": 65.1,
+        "roofline_decode_tokens_s": 34.1
+      }
+    },
+    {
+      "agent": "planner",
+      "action": "plan_complete",
+      "status": "success",
+      "detail": "4 candidates across 4 models and 1 engines",
+      "data": {}
+    },
+    {
+      "agent": "judge",
+      "action": "grade_candidate",
+      "status": "success",
+      "detail": "nemotron-3.5-lightning-30b-a3b-nvfp4-vllm-nvfp4-spec: keyword 1.00, rubric 0.63, blended 0.78",
+      "data": {
+        "candidate_id": "nemotron-3.5-lightning-30b-a3b-nvfp4-vllm-nvfp4-spec",
+        "keyword": 1.0,
+        "judge": 0.633,
+        "blended": 0.78,
+        "graded": 2
+      }
+    },
+    {
+      "agent": "judge",
+      "action": "grade_candidate",
+      "status": "success",
+      "detail": "nemotron-3-nano-30b-a3b-nvfp4-vllm-nvfp4: keyword 1.00, rubric 0.63, blended 0.78",
+      "data": {
+        "candidate_id": "nemotron-3-nano-30b-a3b-nvfp4-vllm-nvfp4",
+        "keyword": 1.0,
+        "judge": 0.633,
+        "blended": 0.78,
+        "graded": 2
+      }
+    },
+    {
+      "agent": "judge",
+      "action": "grade_candidate",
+      "status": "success",
+      "detail": "nemotron-3-super-120b-a12b-nvfp4-vllm-nvfp4: keyword 1.00, rubric 0.63, blended 0.78",
+      "data": {
+        "candidate_id": "nemotron-3-super-120b-a12b-nvfp4-vllm-nvfp4",
+        "keyword": 1.0,
+        "judge": 0.633,
+        "blended": 0.78,
+        "graded": 2
+      }
+    },
+    {
+      "agent": "judge",
+      "action": "grade_candidate",
+      "status": "success",
+      "detail": "nemotron-3.5-lightning-30b-a3b-bf16-vllm-bf16: keyword 1.00, rubric 0.63, blended 0.78",
+      "data": {
+        "candidate_id": "nemotron-3.5-lightning-30b-a3b-bf16-vllm-bf16",
+        "keyword": 1.0,
+        "judge": 0.633,
+        "blended": 0.78,
+        "graded": 2
+      }
+    },
+    {
+      "agent": "bench",
+      "action": "measure_candidate",
+      "status": "success",
+      "detail": "nemotron-3.5-lightning-30b-a3b-nvfp4-vllm-nvfp4-spec: TTFT 76 ms, 201.3 tok/s/stream, 23.8 GB peak memory, 202.5 tok/s aggregate",
+      "data": {
+        "candidate_id": "nemotron-3.5-lightning-30b-a3b-nvfp4-vllm-nvfp4-spec",
+        "ttft_ms": 76.42,
+        "throughput_tokens_s": 201.35,
+        "aggregate_throughput_tokens_s": 202.53,
+        "peak_memory_gb": 23.77,
+        "peak_memory_source": "unknown",
+        "quality": 0.78,
+        "simulated": true
+      }
+    },
+    {
+      "agent": "bench",
+      "action": "measure_candidate",
+      "status": "success",
+      "detail": "nemotron-3-nano-30b-a3b-nvfp4-vllm-nvfp4: TTFT 75 ms, 113.9 tok/s/stream, 20.9 GB peak memory, 112.5 tok/s aggregate",
+      "data": {
+        "candidate_id": "nemotron-3-nano-30b-a3b-nvfp4-vllm-nvfp4",
+        "ttft_ms": 75.07,
+        "throughput_tokens_s": 113.88,
+        "aggregate_throughput_tokens_s": 112.52,
+        "peak_memory_gb": 20.85,
+        "peak_memory_source": "unknown",
+        "quality": 0.78,
+        "simulated": true
+      }
+    },
+    {
+      "agent": "bench",
+      "action": "measure_candidate",
+      "status": "success",
+      "detail": "nemotron-3-super-120b-a12b-nvfp4-vllm-nvfp4: TTFT 75 ms, 28.5 tok/s/stream, 84.8 GB peak memory, 28.1 tok/s aggregate",
+      "data": {
+        "candidate_id": "nemotron-3-super-120b-a12b-nvfp4-vllm-nvfp4",
+        "ttft_ms": 75.0,
+        "throughput_tokens_s": 28.49,
+        "aggregate_throughput_tokens_s": 28.13,
+        "peak_memory_gb": 84.81,
+        "peak_memory_source": "unknown",
+        "quality": 0.78,
+        "simulated": true
+      }
+    },
+    {
+      "agent": "bench",
+      "action": "measure_candidate",
+      "status": "success",
+      "detail": "nemotron-3.5-lightning-30b-a3b-bf16-vllm-bf16: TTFT 76 ms, 31.5 tok/s/stream, 68.6 GB peak memory, 31.6 tok/s aggregate",
+      "data": {
+        "candidate_id": "nemotron-3.5-lightning-30b-a3b-bf16-vllm-bf16",
+        "ttft_ms": 76.4,
+        "throughput_tokens_s": 31.49,
+        "aggregate_throughput_tokens_s": 31.65,
+        "peak_memory_gb": 68.62,
+        "peak_memory_source": "unknown",
+        "quality": 0.78,
+        "simulated": true
+      }
+    },
+    {
+      "agent": "optimizer",
+      "action": "reject_all_candidates",
+      "status": "failed",
+      "detail": "No candidate passed optimization gates: nemotron-3.5-lightning-30b-a3b-nvfp4-vllm-nvfp4-spec: complete response 1348.07 ms exceeds gate 1.00 ms; nemotron-3-nano-30b-a3b-nvfp4-vllm-nvfp4: complete response 2323.56 ms exceeds gate 1.00 ms; nemotron-3-super-120b-a12b-nvfp4-vllm-nvfp4: complete response 9060.23 ms exceeds gate 1.00 ms; nemotron-3.5-lightning-30b-a3b-bf16-vllm-bf16: complete response 8213.27 ms exceeds gate 1.00 ms",
+      "data": {
+        "acceptance": {
+          "objective": "highest_quality",
+          "min_quality": 0.5,
+          "max_total_latency_ms": 1
+        },
+        "candidate_count": 4
+      }
+    }
+  ],
+  "started_at": "2026-09-21T14:31:05.229707+00:00",
+  "finished_at": "2026-09-21T14:31:05.738814+00:00",
+  "demo_evidence": {
+    "purpose": "simulated rejection workflow only, not GPU performance",
+    "current_profile_unchanged": true,
+    "acceptance": {
+      "objective": "highest_quality",
+      "min_quality": 0.5,
+      "max_total_latency_ms": 1
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "agent_model": "gpt-5.6-sol",
+  "case_ids": [
+    "local-ai-autopilot-pos-dgx-spark-latency",
+    "local-ai-autopilot-pos-requirement-change-concurrency",
+    "local-ai-autopilot-pos-requirement-change-modality",
+    "local-ai-autopilot-pos-apple-local-ollama",
+    "local-ai-autopilot-pos-no-cuda",
+    "local-ai-autopilot-pos-causal-comparison",
+    "local-ai-autopilot-pos-remote-controller",
+    "local-ai-autopilot-neg-hosted-api",
+    "local-ai-autopilot-neg-finetuning",
+    "local-ai-autopilot-neg-jetson-setup",
+    "local-ai-autopilot-pos-existing-report-read-only",
+    "local-ai-autopilot-pos-english-remote-short",
+    "local-ai-autopilot-pos-remote-cli-missing",
+    "local-ai-autopilot-pos-capacity-only",
+    "local-ai-autopilot-neg-install-ollama",
+    "local-ai-autopilot-neg-hardware-purchase",
+    "local-ai-autopilot-neg-generic-cuda-debug",
+    "local-ai-autopilot-neg-vllm-dockerfile",
+    "local-ai-autopilot-neg-local-versus-hosted",
+    "local-ai-autopilot-neg-explicit-other-tool",
+    "local-ai-autopilot-neg-cpu-only",
+    "local-ai-autopilot-neg-amd-rocm",
+    "local-ai-autopilot-neg-multinode-cluster"
+  ],
+  "codex_cli": "codex-cli 0.155.1",
+  "created_at": "2026-09-21T14:30:04.863777+00:00",
+  "dataset": ".agents/skills/local-ai-autopilot/evals/evals.json",
+  "sandbox": "read-only",
+  "skill_commit": "485ae3ddfa830584d825776509002f95089d3b6e"
+}

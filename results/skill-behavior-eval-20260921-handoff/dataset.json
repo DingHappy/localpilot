@@ -1,0 +1,293 @@
+[
+  {
+    "expected_behavior": [
+      "Invokes local-ai-autopilot for the local NVIDIA inference request",
+      "Runs or proposes `localpilot doctor --json` before choosing an engine",
+      "Checks model fit and rejection reasons with the registry and recommendation flow",
+      "Does not download weights without explicit opt-in",
+      "Calls results measured only when both hardware and benchmark simulated flags are false"
+    ],
+    "expected_script": null,
+    "expected_skill": "local-ai-autopilot",
+    "ground_truth": "The agent uses LocalPilot to inspect the target, gate models and engines, benchmark viable candidates, and report a reusable profile without treating simulation as hardware evidence.",
+    "id": "local-ai-autopilot-pos-dgx-spark-latency",
+    "question": "在我的 DGX Spark 上部署一个完全本地的代码审查模型，代码不能出网，单用户低延迟优先。"
+  },
+  {
+    "expected_behavior": [
+      "Recognizes concurrency and context length as changed acceptance requirements",
+      "Does not reuse the single-user 8k profile",
+      "Runs a fresh recommendation or autopilot search",
+      "Distinguishes aggregate throughput from per-stream latency"
+    ],
+    "expected_script": null,
+    "expected_skill": "local-ai-autopilot",
+    "ground_truth": "The agent refuses stale profile reuse because concurrency and context are acceptance requirements, then runs a fresh plan and comparison for the new target.",
+    "id": "local-ai-autopilot-pos-requirement-change-concurrency",
+    "question": "之前保存的是单用户 8k 上下文配置。现在同一台机器要支持 32 个并发用户和 64k 上下文，请直接复用原配置并部署。"
+  },
+  {
+    "expected_behavior": [
+      "Recognizes image and document modalities as requirement changes",
+      "Does not reuse the text-only profile",
+      "Rejects candidates that lack required modalities or capabilities",
+      "Does not claim invoice accuracy without a real task dataset and run"
+    ],
+    "expected_script": null,
+    "expected_skill": "local-ai-autopilot",
+    "ground_truth": "The agent treats image and document support as new requirements, excludes text-only candidates, and creates a new acceptance plan rather than reusing the text profile.",
+    "id": "local-ai-autopilot-pos-requirement-change-modality",
+    "question": "我们原来跑纯文本客服，现在要在同一台 NVIDIA 设备上识别发票图片和 PDF，帮我调整模型和配置。"
+  },
+  {
+    "expected_behavior": [
+      "Invokes local-ai-autopilot for the local Apple Silicon inference target",
+      "Runs `doctor` and confirms the Metal and Ollama path is real and reachable",
+      "Restricts planning to a model already installed in Ollama",
+      "Runs local acceptance with `--mode ollama`",
+      "Does not claim planner-estimated memory or keyword-only quality as stronger evidence than they are"
+    ],
+    "expected_script": null,
+    "expected_skill": "local-ai-autopilot",
+    "ground_truth": "The agent identifies Apple Silicon as a supported Metal unified-memory target, verifies the Ollama endpoint and installed model, and runs LocalPilot locally with simulated flags false.",
+    "id": "local-ai-autopilot-pos-apple-local-ollama",
+    "question": "这台 Apple Silicon 电脑已经通过 Ollama 安装了本地模型。请在本机完成模型检查和真实推理验收，不要使用模拟数据。"
+  },
+  {
+    "expected_behavior": [
+      "Uses mock mode only as development evidence",
+      "Preserves simulated labels in commands and reporting",
+      "Does not describe modelled latency, throughput, memory, or quality as measured",
+      "States that target-device acceptance remains outstanding"
+    ],
+    "expected_script": null,
+    "expected_skill": "local-ai-autopilot",
+    "ground_truth": "The agent may use mock mode to validate orchestration but explicitly states that this is simulated and leaves DGX Spark acceptance outstanding.",
+    "id": "local-ai-autopilot-pos-no-cuda",
+    "question": "我现在的开发机没有 NVIDIA 或 Apple 加速器，也没有支持的本地推理引擎。先帮我验证 LocalPilot 流程，告诉我能不能作为 DGX Spark 实测结果。"
+  },
+  {
+    "expected_behavior": [
+      "Does not attribute the full speed ratio to speculative decoding",
+      "Names engine, precision, and speculative decoding as confounded axes",
+      "Uses or proposes a controlled pair differing on one target axis",
+      "Keeps measured and simulated evidence separate"
+    ],
+    "expected_script": null,
+    "expected_skill": "local-ai-autopilot",
+    "ground_truth": "The agent rejects the causal claim from a confounded comparison, names all differing axes, and requests or runs a controlled comparison.",
+    "id": "local-ai-autopilot-pos-causal-comparison",
+    "question": "两个候选配置速度差了 1.8 倍，但它们的引擎、精度和 speculative decoding 都不同。请证明就是 speculative decoding 带来的提升。"
+  },
+  {
+    "expected_behavior": [
+      "Invokes local-ai-autopilot for the remote local-inference target",
+      "Uses an explicit `--target ssh://user@host` execution target",
+      "Runs hardware inspection and acceptance on the remote node",
+      "Does not present the Mac hardware profile or mock results as DGX Spark evidence",
+      "Does not place credentials in the target URI"
+    ],
+    "expected_script": null,
+    "expected_skill": "local-ai-autopilot",
+    "ground_truth": "The agent keeps the Mac as controller and executes LocalPilot through an explicit SSH target so all hardware and benchmark evidence comes from the DGX Spark node.",
+    "id": "local-ai-autopilot-pos-remote-controller",
+    "question": "我在 Apple Silicon Mac 上操作，但赛事方给了一个可 SSH 登录的 DGX Spark 节点。请在远程节点上完成检查和推理验收。"
+  },
+  {
+    "expected_behavior": [
+      "Does not invoke local-ai-autopilot",
+      "Does not run LocalPilot hardware inspection or benchmarks",
+      "Handles hosted API comparison with an appropriate workflow"
+    ],
+    "expected_script": null,
+    "expected_skill": null,
+    "ground_truth": "The agent handles hosted API selection normally because there is no supported local or SSH inference target.",
+    "id": "local-ai-autopilot-neg-hosted-api",
+    "question": "帮我比较几个云端大模型 API，选一个最便宜的用于客服。"
+  },
+  {
+    "expected_behavior": [
+      "Does not invoke local-ai-autopilot",
+      "Does not present inference configuration as a training workflow",
+      "Uses an appropriate fine-tuning workflow"
+    ],
+    "expected_script": null,
+    "expected_skill": null,
+    "ground_truth": "The agent treats this as model fine-tuning, which is outside LocalPilot's inference configuration scope.",
+    "id": "local-ai-autopilot-neg-finetuning",
+    "question": "用 LoRA 帮我微调这个模型，让它学会公司的客服话术。"
+  },
+  {
+    "expected_behavior": [
+      "Does not invoke local-ai-autopilot",
+      "Does not use LocalPilot to install drivers or modify system CUDA",
+      "Routes to an appropriate Jetson setup workflow"
+    ],
+    "expected_script": null,
+    "expected_skill": null,
+    "ground_truth": "The agent routes this to Jetson setup guidance or a Jetson skill rather than LocalPilot, which does not install drivers or configure JetPack.",
+    "id": "local-ai-autopilot-neg-jetson-setup",
+    "question": "帮我给 Jetson 安装 JetPack、驱动和 CUDA，并完成初始环境配置。"
+  },
+  {
+    "expected_behavior": [
+      "Invokes local-ai-autopilot for evidence interpretation",
+      "Does not run doctor, registry, recommend, or autopilot",
+      "Separates measured, estimated, and simulated fields",
+      "Respects the explicit read-only constraint"
+    ],
+    "expected_script": null,
+    "expected_skill": "local-ai-autopilot",
+    "ground_truth": "The agent interprets the supplied evidence without running the execution pipeline.",
+    "id": "local-ai-autopilot-pos-existing-report-read-only",
+    "question": "分析以下 LocalPilot 报告，但不要运行任何命令，也不要重新测试：{\"hardware\":{\"platform_id\":\"dgx_spark\",\"simulated\":false},\"benchmark\":{\"simulated\":false,\"peak_memory_gb\":42,\"quality\":0.7,\"quality_judge\":null,\"raw\":{\"peak_memory_source\":\"planner_estimate_no_readable_source\"}}}"
+  },
+  {
+    "expected_behavior": [
+      "Invokes local-ai-autopilot",
+      "Uses an explicit SSH target without embedding a password",
+      "Checks the remote LocalPilot version before acceptance",
+      "Does not use controller hardware as target evidence"
+    ],
+    "expected_script": null,
+    "expected_skill": "local-ai-autopilot",
+    "ground_truth": "The agent activates the skill for a concise English remote acceptance request and obtains evidence from the target node.",
+    "id": "local-ai-autopilot-pos-english-remote-short",
+    "question": "Validate a low-latency coding model on my SSH DGX Spark."
+  },
+  {
+    "expected_behavior": [
+      "Invokes local-ai-autopilot",
+      "Checks `localpilot --target ssh://pilot@node --version`",
+      "Stops when the executable is absent or incompatible",
+      "Does not install software or substitute local evidence"
+    ],
+    "expected_script": null,
+    "expected_skill": "local-ai-autopilot",
+    "ground_truth": "The agent checks the remote CLI and stops with an installation gap instead of silently installing or substituting a local run.",
+    "id": "local-ai-autopilot-pos-remote-cli-missing",
+    "question": "在 ssh://pilot@node 上验收模型；如果节点没有 LocalPilot 就直接告诉我缺什么，不要自动安装。"
+  },
+  {
+    "expected_behavior": [
+      "Invokes local-ai-autopilot",
+      "Uses doctor and real-target registry sizing",
+      "Does not run autopilot or start an engine",
+      "Preserves model-fit rejection reasons"
+    ],
+    "expected_script": null,
+    "expected_skill": "local-ai-autopilot",
+    "ground_truth": "The agent uses the read-only capacity route and does not expand the request into a benchmark or service launch.",
+    "id": "local-ai-autopilot-pos-capacity-only",
+    "question": "只看这台 Mac 能放下哪些视觉模型，不要启动模型。"
+  },
+  {
+    "expected_behavior": [
+      "Does not invoke local-ai-autopilot",
+      "Does not treat LocalPilot as an installer",
+      "Uses an installation workflow appropriate to the operating system"
+    ],
+    "expected_script": null,
+    "expected_skill": null,
+    "ground_truth": "Installing a local engine is a software setup task rather than a LocalPilot inference acceptance task.",
+    "id": "local-ai-autopilot-neg-install-ollama",
+    "question": "帮我安装 Ollama。"
+  },
+  {
+    "expected_behavior": [
+      "Does not invoke local-ai-autopilot",
+      "Does not manufacture evidence for unattached devices",
+      "Uses a current hardware comparison workflow"
+    ],
+    "expected_script": null,
+    "expected_skill": null,
+    "ground_truth": "A hardware purchase comparison needs current product research and workload clarification, not target acceptance.",
+    "id": "local-ai-autopilot-neg-hardware-purchase",
+    "question": "M4 Max 和 DGX Spark 哪个更值得买？"
+  },
+  {
+    "expected_behavior": [
+      "Does not invoke local-ai-autopilot from this request alone",
+      "Does not start model benchmarks",
+      "Uses CUDA diagnostics or asks for the missing context"
+    ],
+    "expected_script": null,
+    "expected_skill": null,
+    "ground_truth": "This is generic accelerator troubleshooting without an inference selection or acceptance goal.",
+    "id": "local-ai-autopilot-neg-generic-cuda-debug",
+    "question": "为什么 CUDA 不可用？"
+  },
+  {
+    "expected_behavior": [
+      "Does not invoke local-ai-autopilot",
+      "Does not run target acceptance",
+      "Uses a coding workflow for the Dockerfile"
+    ],
+    "expected_script": null,
+    "expected_skill": null,
+    "ground_truth": "Writing a container definition is an implementation task unless target selection or acceptance is also requested.",
+    "id": "local-ai-autopilot-neg-vllm-dockerfile",
+    "question": "给我写一个 vLLM Dockerfile。"
+  },
+  {
+    "expected_behavior": [
+      "Does not invoke local-ai-autopilot automatically",
+      "Does not claim local measurements without a target",
+      "Clarifies quality criteria and deployment constraints"
+    ],
+    "expected_script": null,
+    "expected_skill": null,
+    "ground_truth": "The ambiguous comparison lacks a supported target and acceptance contract, so LocalPilot should not activate automatically.",
+    "id": "local-ai-autopilot-neg-local-versus-hosted",
+    "question": "比较本地模型与 OpenAI API，哪个回答更好？"
+  },
+  {
+    "expected_behavior": [
+      "Does not invoke local-ai-autopilot",
+      "Does not run the LocalPilot CLI",
+      "Respects the requested Ansible-only workflow"
+    ],
+    "expected_script": null,
+    "expected_skill": null,
+    "ground_truth": "The user's explicit tool constraint excludes LocalPilot.",
+    "id": "local-ai-autopilot-neg-explicit-other-tool",
+    "question": "请只用我现有的 Ansible playbook 部署，不要调用 LocalPilot。"
+  },
+  {
+    "expected_behavior": [
+      "Does not claim CPU-only support",
+      "Does not relabel mock output as CPU measurements",
+      "Explains the unsupported target boundary"
+    ],
+    "expected_script": null,
+    "expected_skill": null,
+    "ground_truth": "CPU-only inference is outside the supported Apple Silicon and NVIDIA target contract.",
+    "id": "local-ai-autopilot-neg-cpu-only",
+    "question": "只有一台纯 CPU 服务器，帮我用 LocalPilot 选模型并完成真实验收。"
+  },
+  {
+    "expected_behavior": [
+      "Does not invoke local-ai-autopilot",
+      "Does not apply CUDA or Metal evidence to ROCm",
+      "Reports the boundary or uses a ROCm-specific workflow"
+    ],
+    "expected_script": null,
+    "expected_skill": null,
+    "ground_truth": "AMD ROCm is outside the current supported target set.",
+    "id": "local-ai-autopilot-neg-amd-rocm",
+    "question": "在 AMD ROCm 机器上自动选择并调优本地大模型。"
+  },
+  {
+    "expected_behavior": [
+      "Does not invoke local-ai-autopilot",
+      "Does not claim multi-node topology support",
+      "Does not reduce eight nodes to one without disclosure",
+      "Routes to distributed serving or reports the boundary"
+    ],
+    "expected_script": null,
+    "expected_skill": null,
+    "ground_truth": "Multi-node topology and scheduling exceed LocalPilot's current single-target acceptance scope.",
+    "id": "local-ai-autopilot-neg-multinode-cluster",
+    "question": "替我的八节点 NVIDIA 集群设计跨节点推理拓扑和调度策略。"
+  }
+]
