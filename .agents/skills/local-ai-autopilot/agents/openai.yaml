@@ -1,4 +1,4 @@
 interface:
   display_name: "Local AI Autopilot"
-  short_description: "Plan and evidence-label local or remote inference configurations"
+  short_description: "Plan Apple Silicon or single-node NVIDIA inference configurations"
   default_prompt: "Use $local-ai-autopilot to plan, attempt to validate, and remember a serving configuration for the selected local or SSH target while separating measured, estimated, and simulated evidence."

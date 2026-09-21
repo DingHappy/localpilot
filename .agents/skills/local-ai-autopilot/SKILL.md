@@ -1,6 +1,6 @@
 ---
 name: local-ai-autopilot
-description: Turn a local or SSH inference goal into an evidence-labelled serving profile with LocalPilot. Use for Apple Silicon, DGX Spark, and CUDA targets when choosing or validating model, engine, precision, context, concurrency, acceptance, or re-planning decisions. Attempt real validation when the target is ready and clearly distinguish measured, estimated, and simulated evidence. Do not use for hosted API selection, training or fine-tuning, generic accelerator setup, Jetson workflows, or cloud deployment.
+description: Turn an Apple Silicon or single-node NVIDIA/CUDA inference goal into an evidence-labelled serving profile with LocalPilot, locally or over SSH. Use when choosing or validating model, engine, precision, context, concurrency, acceptance, or re-planning decisions on that target. Attempt real validation when ready and distinguish measured, estimated, and simulated evidence. Do not activate for hosted API selection, training or fine-tuning, software or driver installation, hardware purchase comparisons, generic accelerator troubleshooting, CPU-only or AMD/ROCm targets, Jetson workflows, multi-node topology or cluster scheduling, or cloud deployment.
 ---
 
 # Local AI Autopilot
@@ -61,6 +61,8 @@ DGX Spark model. Registry otherwise sizes against the detected target.
 - A successful candidate merely ran; it wins only after gates and ranking.
 - Do not infer that one knob caused a difference when other axes changed.
 - If `quality_judge` is null, describe quality evidence as weak.
+- For concurrency above one, always distinguish per-stream throughput from
+  aggregate throughput.
 - Treat peak memory as observed only when `peak_memory_source` identifies an
   engine or sampled pool; otherwise it is an estimate.
 

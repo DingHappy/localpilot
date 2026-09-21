@@ -131,7 +131,7 @@
   },
   {
     "id": "local-ai-autopilot-pos-existing-report-read-only",
-    "question": "分析这份 LocalPilot JSON 报告，但不要运行任何命令，也不要重新测试。",
+    "question": "分析以下 LocalPilot 报告，但不要运行任何命令，也不要重新测试：{\"hardware\":{\"platform_id\":\"dgx_spark\",\"simulated\":false},\"benchmark\":{\"simulated\":false,\"peak_memory_gb\":42,\"quality\":0.7,\"quality_judge\":null,\"raw\":{\"peak_memory_source\":\"planner_estimate_no_readable_source\"}}}",
     "expected_skill": "local-ai-autopilot",
     "expected_script": null,
     "ground_truth": "The agent interprets the supplied evidence without running the execution pipeline.",
