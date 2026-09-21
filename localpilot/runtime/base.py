@@ -28,7 +28,7 @@ class RuntimeProvider(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def generate(self, prompt: str, max_new_tokens: int = 64) -> str:
+    def generate(self, prompt: Any, max_new_tokens: int = 64) -> str:
         raise NotImplementedError
 
     @abstractmethod
@@ -40,4 +40,3 @@ class RuntimeProvider(ABC):
         max_new_tokens: int,
     ) -> BenchmarkMetrics:
         raise NotImplementedError
-

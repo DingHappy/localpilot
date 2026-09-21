@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from statistics import mean
 from typing import Any, Dict, List, Optional, Tuple
 
+from localpilot.benchmark.prompts import keyword_hit, prompt_has_image, prompt_text
 from localpilot.engines.registry import EngineRegistry, EngineSpec
 from localpilot.runtime.base import RuntimeProvider, RuntimeUnavailable
 from localpilot.schemas import BenchmarkMetrics, CandidatePlan
@@ -42,7 +43,7 @@ class StreamSample:
 
 def _distinct_prompts(
     prompts: List[Dict[str, Any]], concurrency: int
-) -> List[str]:
+) -> List[Dict[str, Any]]:
     """Builds `concurrency` prompts that do not share a full prefix.
 
     Rotating the task's own prompts keeps the load realistic. When more
@@ -51,14 +52,16 @@ def _distinct_prompts(
     but not an entire request, and a benchmark that lets them share
     everything measures the prefix cache.
     """
-    texts = [prompt["text"] for prompt in prompts] or [""]
+    available = prompts or [{"text": ""}]
     built = []
     for index in range(max(1, concurrency)):
-        text = texts[index % len(texts)]
-        repeat = index // len(texts)
+        prompt = dict(available[index % len(available)])
+        text = prompt_text(prompt)
+        repeat = index // len(available)
         if repeat:
             text = f"{text}\n\n(request variant {repeat + 1})"
-        built.append(text)
+        prompt["text"] = text
+        built.append(prompt)
     return built
 
 
@@ -453,11 +456,20 @@ class OpenAICompatRuntime(RuntimeProvider):
         return f"{base}/chat/completions"
 
     def _payload(
-        self, prompt: str, max_new_tokens: int, stream: bool
+        self, prompt: Any, max_new_tokens: int, stream: bool
     ) -> Dict[str, Any]:
+        content: Any = prompt_text(prompt)
+        if prompt_has_image(prompt):
+            content = [
+                {"type": "text", "text": prompt_text(prompt)},
+                {
+                    "type": "image_url",
+                    "image_url": {"url": str(prompt["image_url"])},
+                },
+            ]
         payload = {
             "model": self.model_name,
-            "messages": [{"role": "user", "content": prompt}],
+            "messages": [{"role": "user", "content": content}],
             "max_tokens": max_new_tokens,
             "temperature": 0.0,
             "stream": stream,
@@ -470,7 +482,7 @@ class OpenAICompatRuntime(RuntimeProvider):
             payload["stream_options"] = {"include_usage": True}
         return payload
 
-    def generate(self, prompt: str, max_new_tokens: int = 64) -> str:
+    def generate(self, prompt: Any, max_new_tokens: int = 64) -> str:
         if self.base_url is None:
             raise RuntimeError(f"{self.engine_id} runtime is not started")
         body = json.dumps(self._payload(prompt, max_new_tokens, False)).encode()
@@ -487,7 +499,7 @@ class OpenAICompatRuntime(RuntimeProvider):
             return ""
         return str(choices[0].get("message", {}).get("content", ""))
 
-    def _stream_once(self, prompt: str, max_new_tokens: int) -> StreamSample:
+    def _stream_once(self, prompt: Any, max_new_tokens: int) -> StreamSample:
         body = json.dumps(self._payload(prompt, max_new_tokens, True)).encode()
         request = urllib.request.Request(
             f"{self.base_url}{self._completions_path()}",
@@ -544,7 +556,7 @@ class OpenAICompatRuntime(RuntimeProvider):
         )
 
     def _stream_concurrent(
-        self, prompts: List[str], max_new_tokens: int
+        self, prompts: List[Dict[str, Any]], max_new_tokens: int
     ) -> Tuple[List[StreamSample], float]:
         """Runs one request per prompt at the same time.
 
@@ -585,7 +597,7 @@ class OpenAICompatRuntime(RuntimeProvider):
         if self.base_url is None or self.candidate is None:
             raise RuntimeError(f"{self.engine_id} runtime is not started")
 
-        primary = prompts[0]["text"]
+        primary = prompts[0]
         concurrency = max(1, self.candidate.concurrency)
         batch_prompts = _distinct_prompts(prompts, concurrency)
         # Serial runs rotate too. Repeating one prompt lets warmup populate
@@ -650,8 +662,8 @@ class OpenAICompatRuntime(RuntimeProvider):
 
         quality_hits = 0
         for prompt in prompts:
-            response = self.generate(prompt["text"], max_new_tokens).lower()
-            if any(term.lower() in response for term in prompt["expected_terms"]):
+            response = self.generate(prompt, max_new_tokens)
+            if keyword_hit(response, prompt):
                 quality_hits += 1
         keyword_quality = quality_hits / max(1, len(prompts))
 
@@ -688,7 +700,17 @@ class OpenAICompatRuntime(RuntimeProvider):
                     round(sampler.attributable_gb, 2)
                     if sampler.attributable_gb is not None else None
                 ),
-                "distinct_prompts": len(set(batch_prompts + serial_prompts)),
+                "distinct_prompts": len(
+                    {prompt_text(item) for item in batch_prompts + serial_prompts}
+                ),
+                "image_prompt_ids": [
+                    item.get("id") for item in prompts if prompt_has_image(item)
+                ],
+                "image_requests_measured": (
+                    len(all_samples)
+                    if prompts and all(prompt_has_image(item) for item in prompts)
+                    else 0
+                ),
                 "engine_memory": engine_report,
             },
             ttft_p95_ms=(

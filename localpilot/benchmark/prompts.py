@@ -33,3 +33,22 @@ def tasks_with_prompts(path: Path = None) -> List[str]:
     return sorted(
         {item["task"] for item in config.get("prompts", []) if item.get("task")}
     )
+
+
+def prompt_text(prompt: Any) -> str:
+    if isinstance(prompt, dict):
+        return str(prompt.get("text", ""))
+    return str(prompt)
+
+
+def prompt_has_image(prompt: Any) -> bool:
+    return isinstance(prompt, dict) and bool(prompt.get("image_url"))
+
+
+def keyword_hit(answer: str, prompt: Dict[str, Any]) -> bool:
+    terms = [str(term).lower() for term in prompt.get("expected_terms", [])]
+    lowered = answer.lower()
+    if not terms:
+        return False
+    hits = [term in lowered for term in terms]
+    return all(hits) if prompt.get("expected_terms_match") == "all" else any(hits)

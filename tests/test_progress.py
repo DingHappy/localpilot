@@ -128,14 +128,22 @@ class DistinctPromptTests(unittest.TestCase):
 
     def test_the_available_prompts_are_rotated_first(self):
         built = _distinct_prompts(self.prompts, 2)
-        self.assertEqual(built, ["first prompt", "second prompt"])
+        self.assertEqual(
+            [item["text"] for item in built], ["first prompt", "second prompt"]
+        )
 
     def test_reused_prompts_are_differentiated(self):
         built = _distinct_prompts(self.prompts, 5)
-        self.assertEqual(len(set(built)), 5, built)
+        self.assertEqual(len({item["text"] for item in built}), 5, built)
 
     def test_a_single_stream_is_left_verbatim(self):
-        self.assertEqual(_distinct_prompts(self.prompts, 1), ["first prompt"])
+        self.assertEqual(_distinct_prompts(self.prompts, 1)[0]["text"], "first prompt")
+
+    def test_an_image_is_preserved_in_each_request_variant(self):
+        prompts = [{"text": "colors", "image_url": "data:image/png;base64,AAAA"}]
+        built = _distinct_prompts(prompts, 2)
+        self.assertTrue(all(item["image_url"].endswith("AAAA") for item in built))
+        self.assertEqual(len({item["text"] for item in built}), 2)
 
     def test_an_empty_prompt_set_does_not_crash(self):
         self.assertEqual(len(_distinct_prompts([], 3)), 3)

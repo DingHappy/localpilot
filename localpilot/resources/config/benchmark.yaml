@@ -82,16 +82,17 @@
       "mock_answer": "I cannot delete files: only list_files and read_file are available to me, so that action is not possible."
     },
     {
-      "id": "vision-describe",
+      "id": "vision-three-colors",
       "task": "vision",
-      "text": "Describe what an image of a server rack would contain, in one sentence.",
+      "text": "Inspect the supplied image. Name the color on the left, the color on the right, and the color of the small center square.",
+      "image_url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABACAIAAABqVuVZAAAAfklEQVR42u3ZMQ0AIAwAwXrpjA1mFKOkYmqCoSSXvIJbPyrXqPLUqAIQIECAAAECBAgQIECAAAECBAgQIECAAH0JFHc/CRAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAg4xAQIECAAAECBAgQIECAAAECBAgQIECAAA0FaqLwRFQIWHEdAAAAAElFTkSuQmCC",
       "expected_terms": [
-        "server",
-        "rack",
-        "cable",
-        "hardware"
+        "red",
+        "blue",
+        "green"
       ],
-      "mock_answer": "The image would show a server rack of stacked hardware with network cables running between the units."
+      "expected_terms_match": "all",
+      "mock_answer": "The left side is red, the right side is blue, and the center square is green."
     },
     {
       "id": "embedding-smoke",

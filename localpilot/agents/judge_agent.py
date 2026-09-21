@@ -7,7 +7,7 @@ import urllib.request
 from typing import Any, Dict, List, Optional
 
 from localpilot.agents.base import Agent
-from localpilot.benchmark.prompts import prompts_for_task
+from localpilot.benchmark.prompts import keyword_hit, prompts_for_task
 from localpilot.planner.policies import PolicyEngine
 from localpilot.runtime.base import RuntimeProvider
 from localpilot.schemas import CandidatePlan
@@ -73,7 +73,7 @@ class JudgeAgent(Agent):
         for prompt in prompts:
             try:
                 answer = runtime.generate(
-                    prompt["text"],
+                    prompt,
                     max_new_tokens=int(self.config.get("max_new_tokens", 256)),
                 )
             except Exception as exc:
@@ -84,10 +84,7 @@ class JudgeAgent(Agent):
                     }
                 )
                 continue
-            lowered = answer.lower()
-            hit = any(
-                term.lower() in lowered for term in prompt["expected_terms"]
-            )
+            hit = keyword_hit(answer, prompt)
             keyword_hits += 1 if hit else 0
             samples.append(
                 {

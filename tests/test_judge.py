@@ -2,6 +2,7 @@ import unittest
 
 from helpers import candidate
 from localpilot.agents.judge_agent import JudgeAgent
+from localpilot.benchmark.prompts import keyword_hit
 from localpilot.planner.policies import PolicyEngine
 from localpilot.runtime.mock import MockRuntime
 
@@ -60,6 +61,14 @@ class RubricTests(unittest.TestCase):
         )
         self.assertEqual(verdict["correctness"], 1.0)
         self.assertEqual(verdict["completeness"], 0.0)
+
+    def test_deterministic_vision_check_requires_every_term(self):
+        prompt = {
+            "expected_terms": ["red", "blue", "green"],
+            "expected_terms_match": "all",
+        }
+        self.assertTrue(keyword_hit("red, blue, and green", prompt))
+        self.assertFalse(keyword_hit("red and blue", prompt))
 
 
 class BlendTests(unittest.TestCase):

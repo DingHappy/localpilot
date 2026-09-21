@@ -4,7 +4,7 @@ import hashlib
 import random
 from typing import Any, Dict, List, Optional
 
-from localpilot.benchmark.prompts import load_benchmark_config
+from localpilot.benchmark.prompts import keyword_hit, load_benchmark_config, prompt_text
 from localpilot.planner.policies import PolicyEngine
 from localpilot.runtime.base import RuntimeProvider
 from localpilot.schemas import BenchmarkMetrics, CandidatePlan
@@ -96,10 +96,10 @@ class MockRuntime(RuntimeProvider):
             }
         return self._answers
 
-    def generate(self, prompt: str, max_new_tokens: int = 64) -> str:
+    def generate(self, prompt: Any, max_new_tokens: int = 64) -> str:
         if not self.started:
             raise RuntimeError("Mock runtime is not started")
-        answer = self._canned_answers().get(prompt)
+        answer = self._canned_answers().get(prompt_text(prompt))
         if answer:
             return answer
         return (
@@ -199,8 +199,8 @@ class MockRuntime(RuntimeProvider):
 
         quality_hits = 0
         for prompt in prompts:
-            response = self.generate(prompt["text"], max_new_tokens).lower()
-            if any(term.lower() in response for term in prompt["expected_terms"]):
+            response = self.generate(prompt, max_new_tokens)
+            if keyword_hit(response, prompt):
                 quality_hits += 1
         keyword_quality = quality_hits / max(1, len(prompts))
         quality = min(

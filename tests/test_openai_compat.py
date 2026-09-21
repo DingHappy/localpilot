@@ -76,6 +76,24 @@ class LaunchCommandTests(unittest.TestCase):
             payload = runtime._payload("hello", 32, False)
         self.assertEqual(payload["reasoning_effort"], "none")
 
+    def test_multimodal_payload_contains_the_real_image(self):
+        runtime = VLLMRuntime()
+        runtime.candidate = real(engine="vllm")
+        runtime.model_name = "vision-model"
+        payload = runtime._payload(
+            {
+                "text": "Name every color.",
+                "image_url": "data:image/png;base64,AAAA",
+            },
+            32,
+            False,
+        )
+        content = payload["messages"][0]["content"]
+        self.assertEqual(content[0], {"type": "text", "text": "Name every color."})
+        self.assertEqual(
+            content[1]["image_url"]["url"], "data:image/png;base64,AAAA"
+        )
+
     def test_no_template_placeholder_survives_rendering(self):
         """An unfilled {placeholder} would reach the shell verbatim.
 
