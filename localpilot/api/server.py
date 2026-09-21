@@ -9,11 +9,20 @@ from typing import Any, Dict
 
 from localpilot.api.jobs import JobRegistry
 from localpilot.benchmark.prompts import load_benchmark_config
+from localpilot.control.reconcile import (
+    ReconcilePolicy,
+    Reconciler,
+    RuntimeObservation,
+    ServiceObjectives,
+)
+from localpilot.control.telemetry import RequestTelemetry
+from localpilot.control.traffic import TrafficGate
 from localpilot.engines.registry import EngineRegistry
 from localpilot.executor.process import runtime_factory, runtime_names
 from localpilot.hardware.profiler import HardwareProfiler
 from localpilot.intent.parser import parse_intent
 from localpilot.models.registry import ModelRegistry
+from localpilot.orchestrator import profile_requirements
 from localpilot.planner.policies import PolicyEngine
 from localpilot.profiles.store import ProfileStore
 from localpilot.schemas import CandidatePlan, MemoryEstimate
@@ -95,6 +104,8 @@ def create_app():
     registry = ModelRegistry()
     policies = PolicyEngine()
     memory_model = MemoryModel(policies.memory_config)
+    telemetry = RequestTelemetry()
+    traffic = TrafficGate()
 
     # ------------------------------------------------------------------
     # status
@@ -107,6 +118,7 @@ def create_app():
             "ready": current.get("status") == "READY",
             "simulated": current.get("simulated"),
             "runtimes": runtime_names(),
+            "traffic": traffic.status(),
         }
 
     @app.get("/v1/hardware")
@@ -126,7 +138,7 @@ def create_app():
         }
 
     @app.get("/v1/registry")
-    def model_registry(task: str = None, simulate: bool = True):
+    def model_registry(task: str = None, simulate: bool = False):
         """The model registry with this machine's sizing applied.
 
         Returning the memory estimate and the bandwidth ceiling alongside
@@ -258,6 +270,80 @@ def create_app():
         }
 
     # ------------------------------------------------------------------
+    # adaptive control
+
+    @app.get("/v1/telemetry")
+    def telemetry_snapshot():
+        return telemetry.snapshot()
+
+    @app.post("/v1/reconcile")
+    def reconcile_runtime(payload: dict):
+        current = store.current()
+        profile_key = current.get("profile_key")
+        saved = store.load(profile_key) if profile_key else None
+        thresholds = payload.get("thresholds") or {}
+        if not isinstance(thresholds, dict):
+            raise HTTPException(status_code=400, detail="thresholds must be an object")
+        supplied_metrics = payload.get("metrics") or {}
+        if not isinstance(supplied_metrics, dict):
+            raise HTTPException(status_code=400, detail="metrics must be an object")
+        observation = RuntimeObservation.from_mapping(
+            {**telemetry.snapshot(), **supplied_metrics}
+        )
+        try:
+            if saved is None:
+                objectives = ServiceObjectives(
+                    max_request_p95_ms=thresholds.get("max_request_p95_ms"),
+                    max_ttft_p95_ms=thresholds.get("max_ttft_p95_ms"),
+                    min_throughput_tokens_s=thresholds.get(
+                        "min_throughput_tokens_s"
+                    ),
+                    max_error_rate=float(thresholds.get("max_error_rate", 0.02)),
+                    min_quality=thresholds.get("min_quality"),
+                    min_available_memory_gb=thresholds.get(
+                        "min_available_memory_gb"
+                    ),
+                    max_queue_depth=thresholds.get("max_queue_depth"),
+                )
+                hardware_fingerprint = None
+            else:
+                objectives = ServiceObjectives.from_profile(
+                    saved,
+                    max_request_p95_ms=thresholds.get("max_request_p95_ms"),
+                    max_ttft_p95_ms=thresholds.get("max_ttft_p95_ms"),
+                    min_throughput_tokens_s=thresholds.get(
+                        "min_throughput_tokens_s"
+                    ),
+                    max_error_rate=float(thresholds.get("max_error_rate", 0.02)),
+                    min_quality=thresholds.get("min_quality"),
+                    min_available_memory_gb=thresholds.get(
+                        "min_available_memory_gb"
+                    ),
+                    max_queue_depth=thresholds.get("max_queue_depth"),
+                )
+                hardware_fingerprint = HardwareProfiler().profile(
+                    simulate=saved.simulated
+                ).fingerprint
+            desired = (
+                profile_requirements(parse_intent(str(payload["goal"])))
+                if payload.get("goal")
+                else None
+            )
+            result = Reconciler(store).reconcile(
+                observation,
+                objectives,
+                ReconcilePolicy(
+                    consecutive_breaches=int(payload.get("window", 3)),
+                    cooldown_seconds=int(payload.get("cooldown_seconds", 900)),
+                ),
+                hardware_fingerprint=hardware_fingerprint,
+                desired_requirements=desired,
+            )
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return result.to_dict()
+
+    # ------------------------------------------------------------------
     # inference
 
     @app.get("/v1/models")
@@ -300,15 +386,26 @@ def create_app():
             if message.get("role") in {"system", "user"}
         )
         candidate = _candidate_from_state(current["candidate"])
+        if not traffic.acquire():
+            raise HTTPException(
+                status_code=503,
+                detail="LocalPilot is draining in-flight requests for a safe change",
+            )
+        request_token = telemetry.begin()
+        ok = False
         try:
             runtime = session.ensure(candidate)
             output = runtime.generate(
                 prompt, max_new_tokens=int(payload.get("max_tokens", 256))
             )
+            ok = True
         except Exception as exc:
             raise HTTPException(
                 status_code=500, detail=f"{type(exc).__name__}: {exc}"
             ) from exc
+        finally:
+            telemetry.complete(request_token, ok=ok)
+            traffic.release()
         return {
             "id": f"chatcmpl-{uuid.uuid4().hex}",
             "object": "chat.completion",
@@ -339,6 +436,83 @@ def create_app():
         session.stop()
         store.stop()
         return {"status": "STOPPED"}
+
+    @app.post("/internal/drain")
+    def drain(payload: dict = None):
+        body = payload or {}
+        try:
+            timeout = float(body.get("timeout", 30))
+            return traffic.drain(timeout)
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post("/internal/resume")
+    def resume():
+        return traffic.resume()
+
+    @app.post("/internal/activate")
+    def activate(payload: dict):
+        state = traffic.status()
+        if state["accepting"] or state["active_requests"]:
+            raise HTTPException(
+                status_code=409,
+                detail="Drain traffic successfully before activating a profile",
+            )
+        profile_key = str(payload.get("profile_key", "")).strip()
+        if not profile_key:
+            raise HTTPException(status_code=400, detail="profile_key is required")
+        staged = store.load(profile_key)
+        if staged is None:
+            raise HTTPException(status_code=404, detail="unknown profile")
+
+        previous_state = store.current()
+        previous_key = previous_state.get("profile_key")
+        previous_candidate = previous_state.get("candidate")
+        candidate = staged.candidate
+        started = time.perf_counter()
+        try:
+            runtime = session.ensure(candidate)
+            health = runtime.health_check()
+            if not health.get("healthy"):
+                raise RuntimeError(
+                    f"staged runtime failed health check: {health.get('detail')}"
+                )
+            output = runtime.generate("Reply with LOCALPILOT_READY", max_new_tokens=16)
+            if not str(output).strip():
+                raise RuntimeError("staged runtime returned an empty business probe")
+            store.activate(profile_key)
+        except Exception as exc:
+            store.set_current(previous_state)
+            if previous_candidate:
+                try:
+                    session.ensure(_candidate_from_state(previous_candidate))
+                except Exception as rollback_exc:
+                    raise HTTPException(
+                        status_code=500,
+                        detail=(
+                            f"Activation failed ({type(exc).__name__}: {exc}); "
+                            "the previous profile state was restored but its runtime "
+                            f"could not be restarted ({type(rollback_exc).__name__}: "
+                            f"{rollback_exc})"
+                        ),
+                    ) from exc
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    f"Activation failed and previous profile was restored: "
+                    f"{type(exc).__name__}: {exc}"
+                ),
+            ) from exc
+        return {
+            "status": "ACTIVATED",
+            "profile_key": profile_key,
+            "previous_profile_key": previous_key,
+            "candidate_id": candidate.candidate_id,
+            "probe_status": "passed",
+            "activation_ms": round((time.perf_counter() - started) * 1000, 3),
+            "traffic": traffic.status(),
+            "next_step": "resume traffic after reviewing this result",
+        }
 
     # ------------------------------------------------------------------
     # dashboard

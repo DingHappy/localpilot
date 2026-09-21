@@ -204,6 +204,7 @@ class SavedProfile(Serializable):
     created_at: str
     last_verified_at: str
     platform_id: str = "unknown"
+    requirements: Dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "SavedProfile":
@@ -224,6 +225,7 @@ class SavedProfile(Serializable):
             created_at=data["created_at"],
             last_verified_at=data["last_verified_at"],
             platform_id=data.get("platform_id", "unknown"),
+            requirements=dict(data.get("requirements", {})),
         )
 
 

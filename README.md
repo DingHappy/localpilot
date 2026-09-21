@@ -4,8 +4,8 @@
 the engine, the precision and the serving configuration, measures the
 candidates against each other on your machine, and remembers the winner.
 
-Built for NVIDIA DGX Spark and other CUDA targets, and shipped with an
-[Agent Skill](integrations/local-ai-autopilot/SKILL.md) so a coding agent can
+Built for Apple Silicon, NVIDIA DGX Spark and other CUDA targets, and shipped with an
+[Agent Skill](.agents/skills/local-ai-autopilot/SKILL.md) so a coding agent can
 drive the whole loop.
 
 ## The problem
@@ -80,19 +80,66 @@ Every comparison names the axes on which the pair differed. A ratio between
 configurations that differ in three things is not evidence about any one of
 them, and LocalPilot will not present it as such.
 
-The winner is written to a profile keyed on a hardware fingerprint plus the
-task and priority. **The next identical request is a lookup, not a search.**
+The winner is written to a profile keyed on the hardware fingerprint and the
+parsed acceptance requirements: task, privacy, priority, quality, context,
+concurrency, capabilities, modalities and languages. **The next equivalent
+request is a lookup; a changed requirement triggers a new search.**
 
 ## Quick start
+
+Codex discovers the project-local Skill directly from `.agents/skills/`.
+Verify it, or install the same canonical Skill for another supported agent:
+
+```bash
+python3 .agents/skills/local-ai-autopilot/scripts/install.py status --json
+python3 .agents/skills/local-ai-autopilot/scripts/install.py install \
+    --agent claude-code --target .
+```
+
+The installer also supports `cursor`, `gemini`, `codex`, and `all`. It will
+not overwrite an unmanaged or locally modified Skill directory. It installs
+only the Skill files; install the LocalPilot Python package separately on the
+controller and every execution node, then verify `localpilot --version`.
+
+### Platform-independent controller and execution targets
+
+The controller can be any computer that runs Python, the Agent, and SSH. The
+execution target can be that same machine or a remote node. Apple Silicon uses
+Metal through Ollama; NVIDIA nodes use their detected CUDA engines.
+
+```bash
+# Inspect the current execution target.
+localpilot doctor --json
+
+# Run real local inference when a supported engine and model are present.
+localpilot autopilot "local chat assistant, quality first" \
+  --mode ollama --json
+
+# Inspect the machine that will actually run the models.
+localpilot --target ssh://pilot@dgx-spark doctor --json
+
+# Run the complete search and acceptance loop on that node.
+localpilot --target ssh://pilot@dgx-spark \
+  autopilot "本地发票识别，质量优先" --mode vllm --json
+```
+
+The remote node needs SSH access and its own LocalPilot installation. If the
+executable is inside a virtual environment, pass its path with
+`--remote-command`, or set `LOCALPILOT_REMOTE_COMMAND`. Hardware inspection,
+engine processes, profiles, and reports stay on the execution node. Passwords
+must not be placed in the target URI; use the normal SSH authentication path.
 
 No CUDA device needed to see the whole loop:
 
 ```bash
 python3 -m localpilot.cli doctor                  # what this machine is
-python3 -m localpilot.cli registry --task coding  # what fits, and what does not
+python3 -m localpilot.cli registry --task coding --simulate  # simulated DGX sizing
 python3 -m localpilot.cli demo --mode mock        # the A/B story
 python3 -m localpilot.cli autopilot "local code review AI, latency first" \
     --mode mock --trace
+
+# Evaluate an aggregated runtime observation without changing the service.
+python3 -m localpilot.cli reconcile --metrics runtime-metrics.json --json
 ```
 
 Mock mode is a roofline simulation: its numbers are derived from memory
@@ -148,13 +195,21 @@ See [`.env.example`](.env.example) for every variable.
 
 ```
 localpilot doctor        this machine: platform, memory, bandwidth, engines
+localpilot --version     installed CLI version for prerequisite checks
 localpilot engines       engine catalogue, knobs, and what was found
-localpilot registry      models sized against this machine's budget
+localpilot registry      models sized against this machine's budget by default
 localpilot recommend     plan candidates without executing anything
 localpilot autopilot     the full loop from a natural-language goal
+localpilot stage         measure and save a candidate without activating it
 localpilot deploy        autopilot by task and priority
 localpilot optimize      the same, for re-tuning
 localpilot benchmark     re-measure the active profile
+localpilot reconcile     turn one drift observation into a safe adjustment plan
+localpilot watch         poll live API telemetry until a plan needs action
+localpilot drain         stop new API work and wait for in-flight requests
+localpilot resume        reopen traffic after a drain or aborted change
+localpilot activate      prewarm, probe, and activate a staged profile
+localpilot rollback      activate a previous profile through the same safe path
 localpilot status        the active configuration
 localpilot profiles      what has been remembered
 localpilot report        export a run to results/ as Markdown and JSON
@@ -164,16 +219,18 @@ localpilot stop          release LocalPilot state, keep weights and profiles
 ```
 
 `--json` everywhere output is meant to be parsed.
-[`references/cli.md`](integrations/local-ai-autopilot/references/cli.md) is the
+[`references/cli.md`](.agents/skills/local-ai-autopilot/references/cli.md) is the
 full contract.
 
 ## The Agent Skill
 
-`integrations/local-ai-autopilot/` is the decision and memory layer for a
-coding agent. It is designed to **compose with** NVIDIA's own skills rather
-than duplicate them: serving recipes and routing belong to the Dynamo skills,
-Jetson targets have their own, and an engine that fails outside LocalPilot's
-bounded recovery is handed to that engine's troubleshooting skill.
+`.agents/skills/local-ai-autopilot/` is the decision and memory layer for a
+coding agent. It can **compose with** specialised NVIDIA, Jetson, or engine
+troubleshooting Skills when a matching Skill is discoverable in the current
+Agent environment. Otherwise it preserves the evidence, reports the boundary,
+and gives the next concrete step instead of assuming that dependency exists.
+The optional routing contract lives in
+[`references/composition.md`](.agents/skills/local-ai-autopilot/references/composition.md).
 
 What it adds is the part none of those do: generate a candidate set, measure
 the candidates against each other, grade output quality against a rubric,
@@ -187,7 +244,7 @@ is a lookup.
 ```
 localpilot/
   intent/        natural language → task, priority, context, concurrency, modality
-  hardware/      CUDA and DGX Spark detection, engine probing
+  hardware/      Apple Metal, CUDA and DGX Spark detection, engine probing
   sizing.py      memory model and the bandwidth roofline
   engines/       engine catalogue: knobs, features, launch templates
   models/        registry and gating, with every rejection kept
@@ -196,7 +253,7 @@ localpilot/
   executor/      per-candidate lifecycle: load, start, verify, measure, stop
   agents/        planner, bench and judge, with separated authority
   optimizer/     priority-weighted ranking behind quality and stability gates
-  profiles/      profile memory keyed on a hardware fingerprint
+  profiles/      profile memory keyed on hardware + acceptance requirements
   api/           dashboard, jobs, OpenAI-compatible endpoints
   web/           the dashboard, no external assets
 docs/
@@ -260,7 +317,9 @@ Details that decide whether the numbers mean anything:
   result.
 - `score` is normalized across the candidates of one run. It ranks within that
   run on that machine and is not portable.
-- `memory_estimate` is pre-flight. `benchmark.peak_memory_gb` is observed.
+- `memory_estimate` is pre-flight. `benchmark.peak_memory_gb` is observed only
+  when `raw.peak_memory_source` identifies an engine or sampled pool; a
+  planner fallback remains an estimate.
 - `quality` blends a keyword signal with a rubric grade. A null
   `quality_judge` means no judge was reachable and the quality figure is weak —
   the profile records that rather than hiding it.
@@ -281,17 +340,17 @@ Details that decide whether the numbers mean anything:
 ## Tests
 
 ```bash
-python3 -m unittest discover -s tests     # 142 tests, standard library only
+python3 -m unittest discover -s tests
 ```
 
-Real-hardware integration tests will be added and marked separately once the
-target is available.
+Real-hardware results remain target-specific. Apple Silicon and DGX Spark
+profiles have different hardware fingerprints and are never reused across
+targets.
 
 ## Status
 
 The orchestration, search space, sizing model, agents, scoring, profile
 memory, CLI, API and dashboard are implemented and tested. The real-execution
-path is implemented against the OpenAI-compatible surface of vLLM,
-TensorRT-LLM, SGLang, NIM and llama.cpp, and is **pending acceptance on a
-DGX Spark** — every number in this repository today is simulated and labelled
-as such.
+path is implemented against the OpenAI-compatible surface of Ollama, vLLM,
+TensorRT-LLM, SGLang, NIM and llama.cpp. Local and SSH execution use the same
+acceptance loop while keeping each target's evidence separate.

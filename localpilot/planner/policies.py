@@ -3,12 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict
 
-from localpilot.utils import load_data_file, project_home
+from localpilot.utils import config_file, load_data_file
 
 
 class PolicyEngine:
     def __init__(self, path: Path = None) -> None:
-        self.path = path or (project_home() / "config" / "policies.yaml")
+        self.path = path or config_file("policies.yaml")
         self.data = load_data_file(self.path)
 
     def priority(self, name: str) -> Dict[str, Any]:

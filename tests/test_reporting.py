@@ -41,7 +41,14 @@ class ReportTests(unittest.TestCase):
         self.assertIn("[memory]", self.markdown)
 
     def test_the_report_states_how_peak_memory_was_obtained(self):
-        self.assertIn("Peak memory source", self.markdown)
+        self.assertIn("Memory source", self.markdown)
+
+    def test_an_estimate_is_not_labelled_as_an_observed_peak(self):
+        benchmark = self.run_payload["best_profile"]["benchmark"]
+        source = (benchmark.get("raw") or {}).get("peak_memory_source")
+        if source == "planner_estimate_no_readable_source":
+            self.assertIn("Estimated memory", self.markdown)
+            self.assertIn("not an observed peak", self.markdown)
 
     def test_a_reproduce_command_is_included(self):
         self.assertIn("## Reproduce", self.markdown)

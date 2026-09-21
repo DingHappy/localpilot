@@ -1,5 +1,10 @@
 import unittest
+import os
+import shutil
+import tempfile
 from importlib.util import find_spec
+from pathlib import Path
+from unittest.mock import patch
 
 API_AVAILABLE = all(find_spec(name) is not None for name in ("fastapi", "httpx"))
 
@@ -12,7 +17,18 @@ class ApiContractTests(unittest.TestCase):
 
         from localpilot.api.server import create_app
 
+        cls.state_directory = tempfile.TemporaryDirectory()
+        root = Path(cls.state_directory.name)
+        shutil.copytree(Path(__file__).resolve().parent.parent / "config", root / "config")
+        cls.environment = patch.dict(os.environ, {"LOCALPILOT_HOME": str(root)})
+        cls.environment.start()
         cls.client = TestClient(create_app())
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.client.close()
+        cls.environment.stop()
+        cls.state_directory.cleanup()
 
     def test_health_lists_the_available_runtimes(self):
         body = self.client.get("/health").json()
@@ -34,7 +50,9 @@ class ApiContractTests(unittest.TestCase):
 
     def test_the_registry_is_sized_against_the_machine(self):
         """A catalogue without sizing is not decision-useful."""
-        data = self.client.get("/v1/registry?task=coding").json()["data"]
+        body = self.client.get("/v1/registry?task=coding").json()
+        self.assertFalse(body["simulated"])
+        data = body["data"]
         self.assertTrue(data)
         for entry in data:
             self.assertIn("sizing", entry)
@@ -42,6 +60,10 @@ class ApiContractTests(unittest.TestCase):
             self.assertIn("max_context_at_budget", entry)
         oversized = [item for item in data if not item["sizing"]["fits"]]
         self.assertTrue(oversized, "the 550B checkpoint should not fit 128 GB")
+
+    def test_registry_simulation_is_explicit(self):
+        body = self.client.get("/v1/registry?task=coding&simulate=true").json()
+        self.assertTrue(body["simulated"])
 
     def test_intent_parses_without_running_anything(self):
         body = self.client.post(
@@ -106,6 +128,82 @@ class ApiContractTests(unittest.TestCase):
             json={"messages": [{"role": "user", "content": "hi"}], "stream": True},
         )
         self.assertEqual(response.status_code, 400)
+
+    def test_api_telemetry_can_trigger_a_non_destructive_reconcile_plan(self):
+        self.client.post(
+            "/v1/autopilot",
+            json={"goal": "本地代码审查，速度优先", "mode": "mock",
+                  "wait": True, "timeout": 120},
+        )
+        self.client.post(
+            "/v1/chat/completions",
+            json={"messages": [{"role": "user", "content": "private input"}]},
+        )
+        telemetry = self.client.get("/v1/telemetry").json()
+        self.assertGreaterEqual(telemetry["window_requests"], 1)
+        self.assertGreater(telemetry["request_p95_ms"], 0)
+        self.assertNotIn("private input", str(telemetry))
+
+        plan = self.client.post(
+            "/v1/reconcile",
+            json={
+                "thresholds": {"max_request_p95_ms": 0},
+                "window": 1,
+                "cooldown_seconds": 0,
+            },
+        ).json()
+        self.assertEqual(plan["decision"], "RECONFIGURE")
+        self.assertTrue(plan["actionable"])
+        self.assertFalse(plan["safe_execution"]["automatic_apply"])
+        self.assertTrue(plan["safe_execution"]["requires_drain"])
+
+    def test_drain_blocks_new_requests_until_resume(self):
+        self.client.post(
+            "/v1/autopilot",
+            json={"goal": "本地代码审查，速度优先", "mode": "mock",
+                  "wait": True, "timeout": 120},
+        )
+        drained = self.client.post("/internal/drain", json={"timeout": 0}).json()
+        self.assertTrue(drained["drained"])
+        try:
+            blocked = self.client.post(
+                "/v1/chat/completions",
+                json={"messages": [{"role": "user", "content": "hello"}]},
+            )
+            self.assertEqual(blocked.status_code, 503)
+        finally:
+            resumed = self.client.post("/internal/resume").json()
+        self.assertEqual(resumed["state"], "SERVING")
+        accepted = self.client.post(
+            "/v1/chat/completions",
+            json={"messages": [{"role": "user", "content": "hello"}]},
+        )
+        self.assertEqual(accepted.status_code, 200)
+
+    def test_activation_requires_drain_and_runs_a_business_probe(self):
+        job = self.client.post(
+            "/v1/autopilot",
+            json={"goal": "本地代码审查，速度优先", "mode": "mock",
+                  "wait": True, "timeout": 120},
+        ).json()
+        profile_key = job["result"]["best_profile"]["profile_key"]
+        refused = self.client.post(
+            "/internal/activate", json={"profile_key": profile_key}
+        )
+        self.assertEqual(refused.status_code, 409)
+
+        self.client.post("/internal/drain", json={"timeout": 0})
+        try:
+            activated = self.client.post(
+                "/internal/activate", json={"profile_key": profile_key}
+            )
+            self.assertEqual(activated.status_code, 200, activated.text)
+            body = activated.json()
+            self.assertEqual(body["status"], "ACTIVATED")
+            self.assertEqual(body["probe_status"], "passed")
+            self.assertFalse(body["traffic"]["accepting"])
+        finally:
+            self.client.post("/internal/resume")
 
     def test_the_dashboard_is_served_without_external_assets(self):
         """A local-only tool whose UI needs a CDN contradicts itself."""

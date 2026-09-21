@@ -3,14 +3,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List
 
-from localpilot.utils import load_data_file, project_home
+from localpilot.utils import config_file, load_data_file
 
 
 FALLBACK_TASK = "chat"
 
 
 def load_benchmark_config(path: Path = None) -> Dict[str, Any]:
-    target = path or (project_home() / "config" / "benchmark.yaml")
+    target = path or config_file("benchmark.yaml")
     return load_data_file(target)
 
 

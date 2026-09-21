@@ -46,7 +46,7 @@ class Planner:
         if not engine_ids:
             raise RuntimeError(
                 "No inference engine is available. Install vLLM, TensorRT-LLM, "
-                "SGLang or NIM, or run with --mode mock."
+                "SGLang, NIM, Ollama or llama.cpp, or run with --mode mock."
             )
 
         models, restriction = self._restrict_to_served(models, engine_ids, runtime)
@@ -459,12 +459,22 @@ class Planner:
             - (0.05 if model.validation != "verified_on_target" else 0.0),
         )
 
+        usable = set(hardware.usable_devices)
+        device = next(
+            (
+                name
+                for name in ("CUDA", "METAL", "CPU")
+                if name in model.devices and name in usable
+            ),
+            next(iter(set(model.devices) & usable), "CPU"),
+        )
+
         return CandidatePlan(
             candidate_id=candidate_id,
             model_id=model.model_id,
             source_id=model.source_id,
             engine=engine.engine_id,
-            device="CUDA" if "CUDA" in model.devices else "CPU",
+            device=device,
             precision=model.precision,
             context_length=context_length,
             runtime=runtime,

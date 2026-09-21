@@ -70,14 +70,18 @@ class ProgressCallbackTests(unittest.TestCase):
 
 class JobTraceTests(unittest.TestCase):
     def test_a_job_exposes_its_trace_alongside_the_result(self):
-        registry = JobRegistry()
-        job = registry.submit(GOAL, mode="mock")
-        for _ in range(600):
-            if job.status in {"succeeded", "failed"}:
-                break
-            import time
+        with tempfile.TemporaryDirectory() as directory:
+            store = ProfileStore(Path(directory))
+            registry = JobRegistry(
+                orchestrator_factory=lambda: Orchestrator(store=store)
+            )
+            job = registry.submit(GOAL, mode="mock")
+            for _ in range(600):
+                if job.status in {"succeeded", "failed"}:
+                    break
+                import time
 
-            time.sleep(0.05)
+                time.sleep(0.05)
 
         self.assertEqual(job.status, "succeeded", job.error)
         payload = job.to_dict()
@@ -88,9 +92,19 @@ class JobTraceTests(unittest.TestCase):
         self.assertIn("agent", payload["trace"][0])
 
     def test_the_history_listing_omits_the_heavy_fields(self):
-        registry = JobRegistry()
-        registry.submit(GOAL, mode="mock")
-        summary = registry.recent(1)[0].to_dict(include_result=False)
+        with tempfile.TemporaryDirectory() as directory:
+            store = ProfileStore(Path(directory))
+            registry = JobRegistry(
+                orchestrator_factory=lambda: Orchestrator(store=store)
+            )
+            job = registry.submit(GOAL, mode="mock")
+            summary = registry.recent(1)[0].to_dict(include_result=False)
+            for _ in range(600):
+                if job.status in {"succeeded", "failed"}:
+                    break
+                import time
+
+                time.sleep(0.05)
         self.assertNotIn("result", summary)
         self.assertNotIn("trace", summary)
 

@@ -4,6 +4,8 @@
 |---|---|
 | `essay.md` | The 十日谈 competition essay: outline, narrative spine, and the slots that need real hardware data. |
 | `devlog.md` | The raw daily journal it draws on, appended each evening. |
+| `product-strategy-summary-zh.md` | 当前产品定位、Skill 本质、前十差距、方向调优和端侧长期路线的中文决策总结。 |
+| `adaptive-control-design-zh.md` | 隐性变化检测、介入时机、小型控制 LLM、DGX Spark 资源配比和安全切换方案。 |
 | `architecture-*.svg` | The three figures. |
 
 `scripts/devlog.py` harvests a day's facts — commits, runs, exported reports,
@@ -30,7 +32,7 @@ it, and so they scale cleanly into slides.
 in it is reproducible from the tool itself:
 
 ```bash
-localpilot registry --task coding
+localpilot registry --task coding --simulate
 ```
 
 - **Memory** (9.1 / 21.7 / 65.1 / 79.5 / 348.0 GB) is the planner's estimate:

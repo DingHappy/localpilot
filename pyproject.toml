@@ -5,15 +5,15 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "localpilot"
 version = "0.2.0"
-description = "AI compute autopilot: picks, measures and remembers a local inference configuration on NVIDIA hardware"
+description = "AI compute autopilot for Apple Silicon and NVIDIA inference targets"
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
 license = { text = "Apache-2.0" }
 authors = [
   { name = "LocalPilot contributors" }
 ]
-keywords = ["local-ai", "nvidia", "dgx-spark", "cuda", "vllm", "tensorrt-llm",
-            "nvfp4", "benchmark", "autopilot", "agent-skills"]
+keywords = ["local-ai", "apple-silicon", "ollama", "nvidia", "dgx-spark", "cuda",
+            "vllm", "tensorrt-llm", "nvfp4", "benchmark", "autopilot", "agent-skills"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Programming Language :: Python :: 3",
@@ -59,7 +59,7 @@ localpilot = "localpilot.cli:main"
 include = ["localpilot*"]
 
 [tool.setuptools.package-data]
-localpilot = ["web/*"]
+localpilot = ["web/*", "resources/config/*.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

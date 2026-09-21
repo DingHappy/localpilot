@@ -1,4 +1,0 @@
-interface:
-  display_name: "Local AI Autopilot"
-  short_description: "Choose, measure and remember a local inference configuration on NVIDIA hardware"
-  default_prompt: "Use $local-ai-autopilot to find, validate and remember the best local serving configuration for this machine."

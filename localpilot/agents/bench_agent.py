@@ -47,11 +47,19 @@ class BenchAgent(Agent):
         for result in results:
             if result.status == "success" and result.benchmark:
                 metrics = result.benchmark
+                memory_source = (metrics.raw or {}).get(
+                    "peak_memory_source", "unknown"
+                )
+                memory_word = (
+                    "estimated memory"
+                    if memory_source == "planner_estimate_no_readable_source"
+                    else "peak memory"
+                )
                 detail = (
                     f"{result.candidate.candidate_id}: "
                     f"TTFT {metrics.ttft_ms:.0f} ms, "
                     f"{metrics.throughput_tokens_s:.1f} tok/s/stream, "
-                    f"{metrics.peak_memory_gb:.1f} GB peak"
+                    f"{metrics.peak_memory_gb:.1f} GB {memory_word}"
                 )
                 if metrics.aggregate_throughput_tokens_s:
                     detail += (
@@ -69,6 +77,7 @@ class BenchAgent(Agent):
                             metrics.aggregate_throughput_tokens_s
                         ),
                         "peak_memory_gb": metrics.peak_memory_gb,
+                        "peak_memory_source": memory_source,
                         "quality": metrics.quality,
                         "simulated": metrics.simulated,
                     },

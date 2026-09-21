@@ -234,6 +234,16 @@ class OpenAICompatRuntime(RuntimeProvider):
             value = os.environ.get(variable)
             if value:
                 return value.rstrip("/")
+        if engine_id == "ollama":
+            default = "http://127.0.0.1:11434"
+            try:
+                request = urllib.request.Request(
+                    f"{default}/api/version", method="GET"
+                )
+                with urllib.request.urlopen(request, timeout=1.5):
+                    return default
+            except Exception:
+                return None
         return None
 
     def load_model(self, candidate: CandidatePlan) -> None:
@@ -259,10 +269,14 @@ class OpenAICompatRuntime(RuntimeProvider):
         command = self.build_launch_command(candidate)
         self.launch_command = command
         if os.environ.get("LOCALPILOT_ALLOW_ENGINE_LAUNCH") != "1":
+            download_warning = (
+                " Starting this engine may download model weights."
+                if engine_id != "ollama"
+                else " Ollama will only serve models already installed locally."
+            )
             raise RuntimeUnavailable(
                 f"No running {engine_id} server was configured, and LocalPilot "
-                "will not start one implicitly because that downloads model "
-                "weights.\n"
+                f"will not start one implicitly.{download_warning}\n"
                 f"  Either export LOCALPILOT_{engine_id.upper()}_BASE_URL="
                 "http://127.0.0.1:8000 for a server you already run,\n"
                 "  or set LOCALPILOT_ALLOW_ENGINE_LAUNCH=1 to let LocalPilot "
@@ -448,6 +462,10 @@ class OpenAICompatRuntime(RuntimeProvider):
             "temperature": 0.0,
             "stream": stream,
         }
+        if self._engine_id_for(self.candidate) == "ollama":
+            payload["reasoning_effort"] = os.environ.get(
+                "LOCALPILOT_OLLAMA_REASONING_EFFORT", "none"
+            )
         if stream:
             payload["stream_options"] = {"include_usage": True}
         return payload
@@ -795,3 +813,7 @@ class NIMRuntime(OpenAICompatRuntime):
 
 class LlamaCppRuntime(OpenAICompatRuntime):
     engine_id = "llamacpp"
+
+
+class OllamaRuntime(OpenAICompatRuntime):
+    engine_id = "ollama"

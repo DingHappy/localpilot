@@ -52,7 +52,7 @@
 <!-- ============ THIS SKILL ============ -->
 <rect class="card-accent" x="48" y="176" width="792" height="286" rx="10"/>
 <text class="eyebrow" x="68" y="202">THIS SKILL</text>
-<text class="mod"     x="152" y="202">integrations/local-ai-autopilot</text>
+<text class="mod"     x="152" y="202">.agents/skills/local-ai-autopilot</text>
 <text class="title"   x="68" y="226">Decide · measure · grade · rank · remember</text>
 
 <rect class="card-sub" x="68" y="240" width="752" height="38" rx="7"/>
@@ -78,7 +78,7 @@
 <rect class="card-sub" x="68" y="416" width="752" height="38" rx="7"/>
 <text class="num" x="84" y="440">5</text>
 <text class="em"   x="102" y="440">Remember the winner</text>
-<text class="body" x="320" y="440">keyed on hardware fingerprint + task + priority, so it is reused</text>
+<text class="body" x="320" y="440">keyed on hardware + acceptance requirements, so reuse stays valid</text>
 
 <path class="edge" d="M 444 462 L 444 492" marker-end="url(#a1)"/>
 <text class="lbl" x="458" y="482">hands the execution detail off</text>

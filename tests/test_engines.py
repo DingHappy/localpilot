@@ -11,7 +11,9 @@ class RegistryTests(unittest.TestCase):
 
     def test_the_configured_engines_load(self):
         ids = self.registry.ids()
-        for expected in ("vllm", "trtllm", "sglang", "nim", "llamacpp"):
+        for expected in (
+            "vllm", "trtllm", "sglang", "nim", "llamacpp", "ollama"
+        ):
             self.assertIn(expected, ids)
 
     def test_an_unknown_engine_raises(self):
@@ -38,6 +40,12 @@ class RegistryTests(unittest.TestCase):
     def test_llamacpp_cannot_serve_nvfp4(self):
         """GGUF-only, which rules it out of this platform's native format."""
         self.assertFalse(self.registry.get("llamacpp").supports_feature("nvfp4"))
+
+    def test_ollama_is_the_metal_openai_compatible_engine(self):
+        ollama = self.registry.get("ollama")
+        self.assertEqual(ollama.openai_base_path, "/v1")
+        self.assertTrue(ollama.supports_feature("metal"))
+        self.assertTrue(self.registry.servable("ollama"))
 
     def test_probing_reports_every_engine(self):
         reports = self.registry.probe_all()

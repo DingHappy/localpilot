@@ -3,23 +3,35 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
+import time
+import urllib.error
+import urllib.request
 from dataclasses import asdict, is_dataclass
 from typing import Any, Dict
 
+from localpilot import __version__
 from localpilot.benchmark.runner import BenchmarkRunner
+from localpilot.control.reconcile import (
+    ReconcilePolicy,
+    Reconciler,
+    RuntimeObservation,
+    ServiceObjectives,
+)
 from localpilot.demo import DEFAULT_DEMO_GOAL, print_demo, run_demo
 from localpilot.engines.registry import EngineRegistry
 from localpilot.executor.process import runtime_factory, runtime_names
 from localpilot.hardware.profiler import HardwareProfiler
 from localpilot.intent.parser import parse_intent
 from localpilot.models.registry import ModelRegistry
-from localpilot.orchestrator import Orchestrator
+from localpilot.orchestrator import Orchestrator, profile_requirements
 from localpilot.planner.planner import Planner
 from localpilot.planner.policies import PolicyEngine
 from localpilot.profiles.store import ProfileStore
 from localpilot.reporting import export_run, latest_run_id, results_root
 from localpilot.schemas import CandidatePlan, MemoryEstimate
 from localpilot.sizing import MemoryModel, decode_roofline_tokens_s
+from localpilot.targets import TargetError, extract_target_options, run_on_target
 
 
 MODES = ["auto", "mock"] + [name for name in runtime_names() if name != "mock"]
@@ -330,6 +342,35 @@ def command_autopilot(args) -> int:
     return 0
 
 
+def command_stage(args) -> int:
+    """Measure and save a candidate profile without changing current.json."""
+    before = ProfileStore().current()
+    result = Orchestrator().autopilot(
+        args.goal,
+        mode=args.mode,
+        reuse_profile=False,
+        activate_profile=False,
+    )
+    payload = {
+        "status": "STAGED",
+        "profile_key": result.best_profile.profile_key,
+        "candidate": result.best_profile.candidate.to_dict(),
+        "benchmark": result.best_profile.benchmark.to_dict(),
+        "score": result.best_profile.score,
+        "simulated": result.best_profile.simulated,
+        "active_profile_key": before.get("profile_key"),
+        "next_step": "drain, activate this profile, then resume",
+    }
+    if args.json:
+        _print_json(payload)
+    else:
+        print(f"Staged         {payload['profile_key']}")
+        print(f"Candidate      {payload['candidate']['candidate_id']}")
+        print(f"Active         {payload['active_profile_key'] or '-'} (unchanged)")
+        print("Next           drain, activate, then resume")
+    return 0
+
+
 def command_task_autopilot(args) -> int:
     result = Orchestrator().autopilot(
         _task_prompt(args.task, args.priority),
@@ -386,6 +427,190 @@ def command_profiles(args) -> int:
         print(f"  {profile['candidate_id']}")
         print(f"  score {profile['score']}  ttft {profile['ttft_ms']} ms  "
               f"verified {profile['last_verified_at']}")
+    return 0
+
+
+def _load_metrics_argument(value: str | None) -> Dict[str, Any]:
+    if value is None:
+        return {}
+    try:
+        if value == "-":
+            payload = json.load(sys.stdin)
+        else:
+            with open(value, "r", encoding="utf-8") as handle:
+                payload = json.load(handle)
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"could not read metrics JSON: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("metrics JSON must contain one object")
+    return payload
+
+
+def command_reconcile(args) -> int:
+    store = ProfileStore()
+    current = store.current()
+    profile_key = current.get("profile_key")
+    profile = store.load(profile_key) if profile_key else None
+
+    observation = RuntimeObservation.from_mapping(_load_metrics_argument(args.metrics))
+    if profile is None:
+        objectives = ServiceObjectives(
+            max_request_p95_ms=args.max_request_ms,
+            max_ttft_p95_ms=args.max_ttft_ms,
+            min_throughput_tokens_s=args.min_throughput,
+            max_error_rate=args.max_error_rate,
+            min_quality=args.min_quality,
+            min_available_memory_gb=args.min_available_memory_gb,
+            max_queue_depth=args.max_queue_depth,
+        )
+        hardware_fingerprint = None
+    else:
+        objectives = ServiceObjectives.from_profile(
+            profile,
+            max_request_p95_ms=args.max_request_ms,
+            max_ttft_p95_ms=args.max_ttft_ms,
+            min_throughput_tokens_s=args.min_throughput,
+            max_error_rate=args.max_error_rate,
+            min_quality=args.min_quality,
+            min_available_memory_gb=args.min_available_memory_gb,
+            max_queue_depth=args.max_queue_depth,
+        )
+        hardware_fingerprint = HardwareProfiler().profile(
+            simulate=profile.simulated
+        ).fingerprint
+
+    desired = profile_requirements(parse_intent(args.goal)) if args.goal else None
+    result = Reconciler(store).reconcile(
+        observation,
+        objectives,
+        ReconcilePolicy(
+            consecutive_breaches=args.window,
+            cooldown_seconds=args.cooldown_seconds,
+        ),
+        hardware_fingerprint=hardware_fingerprint,
+        desired_requirements=desired,
+    )
+    if args.json:
+        _print_json(result)
+        return 0
+
+    print(f"Decision       {result.decision}")
+    print(f"Actionable     {'yes' if result.actionable else 'no'}")
+    if result.deferred_by_cooldown:
+        print("Cooldown       active")
+    print(f"Profile        {result.profile_key or '-'}")
+    if result.current_breaches:
+        print(f"Current        {', '.join(result.current_breaches)}")
+    if result.sustained_breaches:
+        print(f"Sustained      {', '.join(result.sustained_breaches)}")
+    for reason in result.reasons:
+        print(f"Reason         {reason}")
+    print(f"Plan           {result.plan_id}")
+    print("Apply          disabled; validate, drain if required, then switch safely")
+    return 0
+
+
+def _post_json(url: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            result = json.loads(response.read().decode("utf-8", "replace"))
+    except (OSError, urllib.error.URLError, json.JSONDecodeError) as exc:
+        raise RuntimeError(f"watch could not reach the LocalPilot API: {exc}") from exc
+    if not isinstance(result, dict):
+        raise RuntimeError("watch expected a JSON object from the LocalPilot API")
+    return result
+
+
+def command_watch(args) -> int:
+    if args.samples < 0:
+        raise ValueError("samples cannot be negative")
+    if args.interval < 0:
+        raise ValueError("interval cannot be negative")
+    thresholds = {
+        key: value
+        for key, value in {
+            "max_request_p95_ms": args.max_request_ms,
+            "max_ttft_p95_ms": args.max_ttft_ms,
+            "min_throughput_tokens_s": args.min_throughput,
+            "max_error_rate": args.max_error_rate,
+            "min_quality": args.min_quality,
+            "min_available_memory_gb": args.min_available_memory_gb,
+            "max_queue_depth": args.max_queue_depth,
+        }.items()
+        if value is not None
+    }
+    payload = {
+        "goal": args.goal,
+        "thresholds": thresholds,
+        "window": args.window,
+        "cooldown_seconds": args.cooldown_seconds,
+    }
+    endpoint = args.url.rstrip("/") + "/v1/reconcile"
+    completed = 0
+    while args.samples == 0 or completed < args.samples:
+        result = _post_json(endpoint, payload)
+        completed += 1
+        if args.json:
+            print(json.dumps(result, ensure_ascii=False, sort_keys=True))
+        else:
+            print(
+                f"{result.get('created_at')}  {result.get('decision')}  "
+                f"actionable={str(bool(result.get('actionable'))).lower()}"
+            )
+            for reason in result.get("reasons") or []:
+                print(f"  {reason}")
+        if result.get("actionable") and args.stop_on_action:
+            return 0
+        if args.samples == 0 or completed < args.samples:
+            time.sleep(args.interval)
+    return 0
+
+
+def command_drain(args) -> int:
+    result = _post_json(
+        args.url.rstrip("/") + "/internal/drain", {"timeout": args.timeout}
+    )
+    if args.json:
+        _print_json(result)
+    else:
+        print(
+            f"Drain          {result.get('status')}  "
+            f"active={result.get('active_requests')}  "
+            f"accepting={str(bool(result.get('accepting'))).lower()}"
+        )
+    return 0 if result.get("drained") else 2
+
+
+def command_resume(args) -> int:
+    result = _post_json(args.url.rstrip("/") + "/internal/resume", {})
+    if args.json:
+        _print_json(result)
+    else:
+        print(
+            f"Traffic        {result.get('state')}  "
+            f"active={result.get('active_requests')}"
+        )
+    return 0
+
+
+def command_activate(args) -> int:
+    result = _post_json(
+        args.url.rstrip("/") + "/internal/activate",
+        {"profile_key": args.profile_key},
+    )
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Activated      {result.get('profile_key')}")
+        print(f"Previous       {result.get('previous_profile_key') or '-'}")
+        print(f"Probe          {result.get('probe_status')}")
+        print("Traffic        remains drained; run localpilot resume")
     return 0
 
 
@@ -466,7 +691,22 @@ def command_demo(args) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="localpilot",
-        description="AI compute autopilot for local inference on NVIDIA hardware",
+        description="AI compute autopilot for local and remote inference targets",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+    )
+    parser.add_argument(
+        "--target",
+        metavar="local|ssh://USER@HOST",
+        help="execute locally or proxy the command to a remote LocalPilot node",
+    )
+    parser.add_argument(
+        "--remote-command",
+        metavar="COMMAND",
+        help="LocalPilot executable on the SSH node (default: localpilot)",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -487,10 +727,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     registry.add_argument("--task", default=None, choices=TASKS)
     registry.add_argument("--context", type=int, default=8192)
-    registry.add_argument("--simulate", action="store_true", default=True)
     registry.add_argument(
-        "--real", dest="simulate", action="store_false",
-        help="size against the detected machine instead of the simulated one",
+        "--simulate",
+        action="store_true",
+        help="size against the simulated DGX Spark instead of this machine",
     )
     registry.add_argument("--json", action="store_true")
     registry.set_defaults(func=command_registry)
@@ -528,6 +768,14 @@ def build_parser() -> argparse.ArgumentParser:
     autopilot.add_argument("--json", action="store_true")
     autopilot.set_defaults(func=command_autopilot)
 
+    stage = subparsers.add_parser(
+        "stage", help="measure and save a profile without activating it"
+    )
+    stage.add_argument("goal")
+    stage.add_argument("--mode", default="auto", choices=MODES)
+    stage.add_argument("--json", action="store_true")
+    stage.set_defaults(func=command_stage)
+
     benchmark = subparsers.add_parser(
         "benchmark", help="re-measure the active profile"
     )
@@ -541,6 +789,105 @@ def build_parser() -> argparse.ArgumentParser:
     profiles = subparsers.add_parser("profiles", help="list remembered profiles")
     profiles.add_argument("--json", action="store_true")
     profiles.set_defaults(func=command_profiles)
+
+    reconcile = subparsers.add_parser(
+        "reconcile",
+        help="evaluate workload drift and write a non-destructive adjustment plan",
+    )
+    reconcile.add_argument(
+        "--metrics",
+        metavar="FILE|-",
+        help="aggregated runtime metrics as a JSON object; '-' reads stdin",
+    )
+    reconcile.add_argument(
+        "--goal", help="optional current workload goal to compare with the profile"
+    )
+    reconcile.add_argument("--max-request-ms", type=float)
+    reconcile.add_argument("--max-ttft-ms", type=float)
+    reconcile.add_argument("--min-throughput", type=float)
+    reconcile.add_argument("--max-error-rate", type=float, default=0.02)
+    reconcile.add_argument("--min-quality", type=float)
+    reconcile.add_argument("--min-available-memory-gb", type=float)
+    reconcile.add_argument("--max-queue-depth", type=float)
+    reconcile.add_argument(
+        "--window",
+        type=int,
+        default=3,
+        help="consecutive observations required before adjusting (default: 3)",
+    )
+    reconcile.add_argument(
+        "--cooldown-seconds",
+        type=int,
+        default=900,
+        help="defer repeated actionable plans during this interval (default: 900)",
+    )
+    reconcile.add_argument("--json", action="store_true")
+    reconcile.set_defaults(func=command_reconcile)
+
+    watch = subparsers.add_parser(
+        "watch",
+        help="poll a running LocalPilot API until drift needs action",
+    )
+    watch.add_argument("--url", default="http://127.0.0.1:8000")
+    watch.add_argument("--goal")
+    watch.add_argument(
+        "--samples",
+        type=int,
+        default=0,
+        help="number of observations; 0 watches until interrupted (default: 0)",
+    )
+    watch.add_argument("--interval", type=float, default=30.0)
+    watch.add_argument("--window", type=int, default=3)
+    watch.add_argument("--cooldown-seconds", type=int, default=900)
+    watch.add_argument("--max-request-ms", type=float)
+    watch.add_argument("--max-ttft-ms", type=float)
+    watch.add_argument("--min-throughput", type=float)
+    watch.add_argument("--max-error-rate", type=float, default=0.02)
+    watch.add_argument("--min-quality", type=float)
+    watch.add_argument("--min-available-memory-gb", type=float)
+    watch.add_argument("--max-queue-depth", type=float)
+    watch.add_argument(
+        "--continue-after-action",
+        dest="stop_on_action",
+        action="store_false",
+        help="continue polling after an actionable plan",
+    )
+    watch.set_defaults(stop_on_action=True)
+    watch.add_argument(
+        "--json", action="store_true", help="emit one JSON object per observation"
+    )
+    watch.set_defaults(func=command_watch)
+
+    drain = subparsers.add_parser(
+        "drain", help="stop new API work and wait for in-flight requests"
+    )
+    drain.add_argument("--url", default="http://127.0.0.1:8000")
+    drain.add_argument("--timeout", type=float, default=30.0)
+    drain.add_argument("--json", action="store_true")
+    drain.set_defaults(func=command_drain)
+
+    resume = subparsers.add_parser(
+        "resume", help="reopen API traffic after a drain or aborted change"
+    )
+    resume.add_argument("--url", default="http://127.0.0.1:8000")
+    resume.add_argument("--json", action="store_true")
+    resume.set_defaults(func=command_resume)
+
+    activate = subparsers.add_parser(
+        "activate", help="prewarm and activate a staged profile while drained"
+    )
+    activate.add_argument("profile_key")
+    activate.add_argument("--url", default="http://127.0.0.1:8000")
+    activate.add_argument("--json", action="store_true")
+    activate.set_defaults(func=command_activate)
+
+    rollback = subparsers.add_parser(
+        "rollback", help="activate a previous profile while traffic is drained"
+    )
+    rollback.add_argument("profile_key")
+    rollback.add_argument("--url", default="http://127.0.0.1:8000")
+    rollback.add_argument("--json", action="store_true")
+    rollback.set_defaults(func=command_activate)
 
     report = subparsers.add_parser(
         "report", help="export a run to results/ as Markdown and JSON"
@@ -568,8 +915,17 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv=None) -> int:
+    raw_argv = list(sys.argv[1:] if argv is None else argv)
+    try:
+        target, remote_command, local_argv = extract_target_options(raw_argv)
+        if target != "local":
+            return run_on_target(target, local_argv, remote_command)
+    except TargetError as exc:
+        print(f"LocalPilot target failed: {exc}", file=sys.stderr)
+        return 2
+
     parser = build_parser()
-    args = parser.parse_args(argv)
+    args = parser.parse_args(local_argv)
     try:
         return int(args.func(args))
     except Exception as exc:

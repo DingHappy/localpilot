@@ -14,6 +14,12 @@ def utc_now() -> str:
 
 
 def project_home() -> Path:
+    """Writable LocalPilot state directory.
+
+    A source checkout keeps state beside the repository for easy inspection.
+    An installed wheel uses the user's XDG state directory instead of trying
+    to write into site-packages.
+    """
     configured = os.environ.get("LOCALPILOT_HOME")
     if configured:
         return Path(configured).expanduser().resolve()
@@ -22,8 +28,32 @@ def project_home() -> Path:
     if (current / "config" / "models.yaml").exists():
         return current
 
-    package_root = Path(__file__).resolve().parent.parent
-    return package_root
+    configured_state = os.environ.get("LOCALPILOT_STATE_HOME")
+    if configured_state:
+        return Path(configured_state).expanduser().resolve()
+    xdg_state = os.environ.get("XDG_STATE_HOME")
+    state_root = (
+        Path(xdg_state).expanduser()
+        if xdg_state
+        else Path.home() / ".local" / "state"
+    )
+    return (state_root / "localpilot").resolve()
+
+
+def config_file(name: str) -> Path:
+    """Resolve a config file from an override, checkout, or installed wheel."""
+    configured = os.environ.get("LOCALPILOT_HOME")
+    if configured:
+        return Path(configured).expanduser().resolve() / "config" / name
+
+    checkout = Path.cwd().resolve() / "config" / name
+    if checkout.exists():
+        return checkout
+
+    packaged = Path(__file__).resolve().parent / "resources" / "config" / name
+    if packaged.exists():
+        return packaged
+    raise FileNotFoundError(f"LocalPilot config file not found: {name}")
 
 
 def load_data_file(path: Path) -> Dict[str, Any]:
@@ -72,4 +102,3 @@ def append_event(event: str, details: Dict[str, Any]) -> None:
     record = {"timestamp": utc_now(), "event": event, "details": safe_details}
     with log_path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
-

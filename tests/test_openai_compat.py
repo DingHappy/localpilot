@@ -6,6 +6,7 @@ from unittest import mock
 from helpers import candidate
 from localpilot.runtime.base import RuntimeUnavailable
 from localpilot.runtime.openai_compat import (
+    OllamaRuntime,
     StreamSample,
     TRTLLMRuntime,
     VLLMRuntime,
@@ -62,6 +63,18 @@ class LaunchCommandTests(unittest.TestCase):
         self.assertIn("--max-model-len", vllm)
         self.assertIn("--max_seq_len", trtllm)
         self.assertNotIn("--max-model-len", trtllm)
+
+    def test_ollama_launch_does_not_name_or_pull_a_model(self):
+        runtime = OllamaRuntime()
+        plan = real(engine="ollama")
+        self.assertEqual(runtime.build_launch_command(plan), ["ollama", "serve"])
+
+    def test_ollama_benchmark_disables_hidden_reasoning_by_default(self):
+        runtime = OllamaRuntime()
+        runtime.candidate = real(engine="ollama")
+        with mock.patch.dict(os.environ, {}, clear=True):
+            payload = runtime._payload("hello", 32, False)
+        self.assertEqual(payload["reasoning_effort"], "none")
 
     def test_no_template_placeholder_survives_rendering(self):
         """An unfilled {placeholder} would reach the shell verbatim.

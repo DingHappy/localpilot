@@ -207,7 +207,7 @@
 | 装不下的大模型 | `Step-3.7-Flash-NVFP4` 权重 120.4 GB | `localpilot registry` |
 | 被闸门拒掉的 | `Nemotron-3-Ultra-550B` 需 348 GB，预算 102.4 GB | 任一次 run 的 trace |
 | 混合架构 KV | 52 层里约 7 层 attention → 7 KB/token | 模型 `config.json` |
-| 最慢的是最小的 | 4B 稠密 26 tok/s | `localpilot registry --task coding` |
+| 最慢的是最小的 | 4B 稠密 26 tok/s | `localpilot registry --task coding --simulate` |
 | 草稿模型误读 | DSpark 是方法名，checkpoint 是 967M 草稿头 | 该模型 model card |
 | 三个测量缺陷 | 见第五节 | commit `f8bc57a` |
 | 配色失败 | 状态红 vs 橙 ΔE 10.8 < 15 | [`README.md`](README.md) 调色板一节 |

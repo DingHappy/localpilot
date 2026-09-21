@@ -35,6 +35,8 @@ class SimulatedProfileTests(unittest.TestCase):
 class DetectedProfileTests(unittest.TestCase):
     def test_no_accelerator_means_not_ready_and_says_why(self):
         profile = HardwareProfiler().profile(simulate=False)
+        if profile.platform_id == "apple_silicon":
+            self.skipTest("this machine has a Metal accelerator")
         if profile.accelerator.get("detected"):
             self.skipTest("this machine has a CUDA device")
         self.assertFalse(profile.real_execution_ready)
@@ -42,6 +44,15 @@ class DetectedProfileTests(unittest.TestCase):
             any("CUDA" in note for note in profile.notes), profile.notes
         )
         self.assertIn("CPU", profile.available_devices)
+
+    def test_apple_silicon_is_a_real_unified_memory_target(self):
+        profile = HardwareProfiler().profile(simulate=False)
+        if profile.os["name"] != "Darwin" or profile.os["machine"] != "arm64":
+            self.skipTest("this machine is not Apple Silicon")
+        self.assertEqual(profile.platform_id, "apple_silicon")
+        self.assertTrue(profile.unified_memory)
+        self.assertIn("METAL", profile.available_devices)
+        self.assertEqual(profile.accelerator.get("source"), "metal")
 
     def test_native_arm_is_not_reported_as_i386(self):
         profile = HardwareProfiler().profile(simulate=False)
@@ -135,9 +146,9 @@ class PlatformDetectionTests(unittest.TestCase):
 
     def test_declared_detection_keys_are_all_read_by_the_code(self):
         """Guards against a config key the code ignores."""
-        from localpilot.utils import load_data_file, project_home
+        from localpilot.utils import config_file, load_data_file
 
-        config = load_data_file(project_home() / "config" / "devices.yaml")
+        config = load_data_file(config_file("devices.yaml"))
         understood = {"gpu_name_contains", "device_tree_model_contains"}
         for platform_id, spec in (config.get("platforms") or {}).items():
             declared = set((spec.get("detect") or {}).keys())

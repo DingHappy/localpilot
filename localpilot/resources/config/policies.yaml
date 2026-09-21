@@ -1,0 +1,129 @@
+{
+  "priorities": {
+    "latency": {
+      "prefer_engine": ["trtllm", "vllm", "sglang", "nim"],
+      "prefer_sparse_models": true,
+      "prefer_speculative_decoding": true,
+      "target_concurrency": 1,
+      "weights": {
+        "quality": 0.10,
+        "latency": 0.35,
+        "throughput": 0.30,
+        "memory": 0.10,
+        "stability": 0.15
+      }
+    },
+    "quality": {
+      "prefer_engine": ["vllm", "trtllm", "sglang", "nim"],
+      "prefer_larger_model": true,
+      "target_concurrency": 1,
+      "weights": {
+        "quality": 0.45,
+        "latency": 0.15,
+        "throughput": 0.15,
+        "memory": 0.10,
+        "stability": 0.15
+      }
+    },
+    "throughput": {
+      "prefer_engine": ["trtllm", "vllm", "sglang"],
+      "prefer_speculative_decoding": false,
+      "target_concurrency": 8,
+      "weights": {
+        "quality": 0.15,
+        "latency": 0.10,
+        "throughput": 0.45,
+        "memory": 0.15,
+        "stability": 0.15
+      },
+      "notes": "Batch serving is the one regime where this platform stops being bandwidth-bound, because a single weight read serves many sequences. Speculative decoding is deprioritized here: it spends the spare compute that batching wants."
+    },
+    "balanced": {
+      "prefer_engine": ["vllm", "trtllm", "sglang", "nim"],
+      "target_concurrency": 2,
+      "weights": {
+        "quality": 0.25,
+        "latency": 0.20,
+        "throughput": 0.20,
+        "memory": 0.15,
+        "stability": 0.20
+      }
+    },
+    "low_memory": {
+      "prefer_engine": ["vllm", "llamacpp", "sglang"],
+      "prefer_smaller_model": true,
+      "target_concurrency": 1,
+      "weights": {
+        "quality": 0.15,
+        "latency": 0.15,
+        "throughput": 0.15,
+        "memory": 0.40,
+        "stability": 0.15
+      }
+    },
+    "long_context": {
+      "prefer_engine": ["vllm", "sglang", "trtllm"],
+      "prefer_low_kv_cost": true,
+      "target_concurrency": 1,
+      "weights": {
+        "quality": 0.25,
+        "latency": 0.15,
+        "throughput": 0.15,
+        "memory": 0.30,
+        "stability": 0.15
+      },
+      "notes": "Ranks candidates by KV cost per token. A hybrid Mamba model and a dense model of the same size differ by more than an order of magnitude here."
+    }
+  },
+
+  "memory": {
+    "_note": "safety_reserve_percent and search_space.gpu_memory_utilization describe the same boundary from two sides and must agree: the reserve is what the gate keeps free, the utilization is what the engine is told it may claim. A gate that admits 95 GB while vLLM is configured to hold 83 GB passes candidates the engine then fails on. On unified memory this fraction is shared with the operating system, not with a spare board, so 30/0.70 rather than the 20/0.90 a discrete GPU tolerates.",
+    "safety_reserve_percent": 30,
+    "activation_floor_gb": 1.5,
+    "activation_fraction": 0.06,
+    "unquantized_tail_fraction": 0.08,
+    "bytes_per_parameter": {
+      "NVFP4": 0.5625,
+      "FP8": 1.0,
+      "BF16": 2.0
+    }
+  },
+
+  "search_space": {
+    "kv_cache_dtypes": ["auto", "fp8"],
+    "gpu_memory_utilization": [0.70],
+    "max_num_seqs": [1, 8, 32],
+    "context_ladder": [8192, 32768, 131072],
+    "speculative_num_tokens": 3,
+    "enable_prefix_caching": true
+  },
+
+  "roofline": {
+    "bandwidth_efficiency": 0.75,
+    "speculative_decoding_expected_gain": 1.8,
+    "batch_amortization_exponent": 0.65,
+    "notes": "bandwidth_efficiency is the fraction of peak memory bandwidth a decode loop actually achieves. speculative_decoding_expected_gain is a prior only: the real acceptance rate is task-dependent and every candidate is measured. batch_amortization_exponent models how aggregate throughput scales with batch size once weight reads are shared."
+  },
+
+  "quality_gate": 0.55,
+  "stability_gate": 0.90,
+  "max_candidates": 4,
+  "max_candidates_per_model": 2,
+  "max_rebuilding_candidates": 1,
+
+  "judge": {
+    "enabled": true,
+    "model_task": "chat",
+    "max_new_tokens": 256,
+    "keyword_weight": 0.4,
+    "judge_weight": 0.6,
+    "notes": "Keyword matching alone cannot tell a correct review from one that merely contains the right word. The judge agent scores against a rubric and its verdict is blended with the keyword signal. If no judge model can be served, the keyword score stands alone and the profile records that."
+  },
+
+  "recovery": {
+    "max_attempts": 2,
+    "minimum_context_length": 4096,
+    "fallback_engine": "vllm",
+    "fallback_device": "CPU"
+  }
+}

@@ -13,21 +13,31 @@ class ProfileStore:
         self.root = root or (project_home() / "profiles")
         self.root.mkdir(parents=True, exist_ok=True)
 
-    def save(self, profile: SavedProfile) -> Path:
+    def save(self, profile: SavedProfile, activate: bool = True) -> Path:
         path = self.root / f"profile-{profile.profile_key}.json"
         atomic_write_json(path, profile.to_dict())
-        self.set_current(
-            {
-                "status": "READY",
-                "profile_key": profile.profile_key,
-                "candidate": profile.candidate.to_dict(),
-                "benchmark": profile.benchmark.to_dict(),
-                "score": profile.score,
-                "simulated": profile.simulated,
-                "updated_at": profile.last_verified_at,
-            }
-        )
+        if activate:
+            self.set_current(self._current_from_profile(profile))
         return path
+
+    def activate(self, key: str) -> SavedProfile:
+        profile = self.load(key)
+        if profile is None:
+            raise ValueError(f"Unknown profile: {key}")
+        self.set_current(self._current_from_profile(profile))
+        return profile
+
+    @staticmethod
+    def _current_from_profile(profile: SavedProfile) -> Dict[str, Any]:
+        return {
+            "status": "READY",
+            "profile_key": profile.profile_key,
+            "candidate": profile.candidate.to_dict(),
+            "benchmark": profile.benchmark.to_dict(),
+            "score": profile.score,
+            "simulated": profile.simulated,
+            "updated_at": profile.last_verified_at,
+        }
 
     def load(self, key: str) -> Optional[SavedProfile]:
         path = self.root / f"profile-{key}.json"
@@ -41,6 +51,7 @@ class ProfileStore:
         task: str,
         priority: str,
         simulated: bool,
+        requirements: Dict[str, Any],
     ) -> Optional[SavedProfile]:
         matches = []
         for path in self.root.glob("profile-*.json"):
@@ -55,6 +66,7 @@ class ProfileStore:
                 and profile.task == task
                 and profile.priority == priority
                 and profile.simulated == simulated
+                and profile.requirements == requirements
             ):
                 matches.append(profile)
         if not matches:
@@ -85,6 +97,7 @@ class ProfileStore:
                     "concurrency": candidate.get("concurrency"),
                     "score": data.get("score"),
                     "simulated": data.get("simulated"),
+                    "requirements": data.get("requirements", {}),
                     "ttft_ms": benchmark.get("ttft_ms"),
                     "throughput_tokens_s": benchmark.get("throughput_tokens_s"),
                     "peak_memory_gb": benchmark.get("peak_memory_gb"),
@@ -156,4 +169,3 @@ class ProfileStore:
         current = self.current()
         current["status"] = "STOPPED"
         self.set_current(current)
-

@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from localpilot.engines.registry import EngineRegistry
 from localpilot.schemas import DeviceInfo, HardwareProfile
-from localpilot.utils import load_data_file, project_home, stable_hash
+from localpilot.utils import config_file, load_data_file, stable_hash
 
 
 def _run(command: List[str], timeout: float = 4.0) -> Optional[str]:
@@ -278,9 +278,7 @@ class HardwareProfiler:
         devices_path: Path = None,
     ) -> None:
         self.engines = engine_registry or EngineRegistry()
-        self.devices_path = devices_path or (
-            project_home() / "config" / "devices.yaml"
-        )
+        self.devices_path = devices_path or config_file("devices.yaml")
 
     def _device_config(self) -> Dict[str, Any]:
         try:
@@ -333,6 +331,9 @@ class HardwareProfiler:
         if accelerator.get("detected"):
             signals["matched_on"] = "fallback: a CUDA device with no platform match"
             return "cuda_discrete", platforms.get("cuda_discrete", {}), signals
+        if platform.system() == "Darwin" and native_machine == "arm64":
+            signals["matched_on"] = "Darwin arm64 with no CUDA device"
+            return "apple_silicon", platforms.get("apple_silicon", {}), signals
         signals["matched_on"] = "no CUDA device detected"
         return "unknown", {}, signals
 
@@ -414,7 +415,28 @@ class HardwareProfiler:
             )
             unified_memory = bool(platform_spec.get("unified_memory", False))
             bandwidth = platform_spec.get("memory_bandwidth_gbps")
-            if devices:
+            if platform_id == "apple_silicon":
+                accelerator = {
+                    "detected": True,
+                    "source": "metal",
+                    "driver_version": None,
+                    "device_count": 1,
+                    "names": [cpu_model],
+                    "memory_total_gb": memory.get("total_gb"),
+                    "unified": True,
+                }
+                devices = [
+                    DeviceInfo(
+                        id="METAL",
+                        kind="gpu",
+                        name=f"{cpu_model} GPU",
+                        available=True,
+                        properties={"memory_total_gb": memory.get("total_gb")},
+                    ),
+                    DeviceInfo(id="CPU", kind="cpu", name=cpu_model, available=True),
+                ]
+                available_devices = ["METAL", "CPU"]
+            elif devices:
                 devices = devices + [
                     DeviceInfo(
                         id="CPU", kind="cpu", name=cpu_model, available=True
@@ -431,6 +453,10 @@ class HardwareProfiler:
             engines_view = engine_reports
             stack = {
                 "cuda": _cuda_toolkit(),
+                "metal": {
+                    "available": platform_id == "apple_silicon",
+                    "unified_memory": platform_id == "apple_silicon",
+                },
                 "platform": platform_id,
                 "platform_detection": detection,
                 "engines_available": sorted(
@@ -447,7 +473,12 @@ class HardwareProfiler:
             ]
             real_ready = bool(accelerator.get("detected")) and bool(servable)
 
-            if not accelerator.get("detected"):
+            if platform_id == "apple_silicon":
+                notes.append(
+                    "Apple Silicon detected: local inference uses the Metal "
+                    "unified-memory path and a servable local engine such as Ollama."
+                )
+            elif not accelerator.get("detected"):
                 notes.append(
                     "No CUDA device detected. Install the driver or run with "
                     "--mode mock for orchestration development."

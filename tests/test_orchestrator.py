@@ -95,6 +95,26 @@ class ProfileMemoryTests(unittest.TestCase):
         self.assertFalse(again.profile_reused)
         self.assertGreater(len(again.candidates), 1)
 
+    def test_a_staged_search_does_not_replace_the_active_profile(self):
+        with tempfile.TemporaryDirectory() as directory:
+            store = ProfileStore(Path(directory))
+            orchestrator = Orchestrator(store=store)
+            active = orchestrator.autopilot(GOAL, mode="mock")
+            staged = orchestrator.autopilot(
+                "本地代码审查 AI，8 个用户，吞吐优先",
+                mode="mock",
+                reuse_profile=False,
+                activate_profile=False,
+            )
+            current = store.current()
+            staged_loaded = store.load(staged.best_profile.profile_key)
+
+        self.assertEqual(current["profile_key"], active.best_profile.profile_key)
+        self.assertNotEqual(
+            staged.best_profile.profile_key, active.best_profile.profile_key
+        )
+        self.assertIsNotNone(staged_loaded)
+
     def test_a_different_priority_does_not_reuse_the_profile(self):
         """A profile is keyed to what was asked for, not only to the machine."""
         with tempfile.TemporaryDirectory() as directory:
@@ -105,6 +125,44 @@ class ProfileMemoryTests(unittest.TestCase):
             )
         self.assertFalse(other.profile_reused)
         self.assertEqual(other.intent.priority, "quality")
+
+    def test_a_different_context_length_does_not_reuse_the_profile(self):
+        with tempfile.TemporaryDirectory() as directory:
+            orchestrator = Orchestrator(store=ProfileStore(Path(directory)))
+            orchestrator.autopilot("本地代码审查 AI，8k 上下文，速度优先", mode="mock")
+            other = orchestrator.autopilot(
+                "本地代码审查 AI，128k 上下文，速度优先", mode="mock"
+            )
+        self.assertFalse(other.profile_reused)
+        self.assertEqual(other.intent.context_length, 128 * 1024)
+
+    def test_a_different_concurrency_does_not_reuse_the_profile(self):
+        with tempfile.TemporaryDirectory() as directory:
+            orchestrator = Orchestrator(store=ProfileStore(Path(directory)))
+            orchestrator.autopilot("本地代码审查 AI，速度优先", mode="mock")
+            other = orchestrator.autopilot(
+                "本地代码审查 AI，2 个用户，速度优先", mode="mock"
+            )
+        self.assertFalse(other.profile_reused)
+        self.assertEqual(other.intent.concurrency, 2)
+
+    def test_a_different_modality_does_not_reuse_the_profile(self):
+        with tempfile.TemporaryDirectory() as directory:
+            orchestrator = Orchestrator(store=ProfileStore(Path(directory)))
+            orchestrator.autopilot("本地图片理解，速度优先", mode="mock")
+            other = orchestrator.autopilot(
+                "本地 PDF 文档识别，速度优先", mode="mock"
+            )
+        self.assertFalse(other.profile_reused)
+        self.assertNotEqual(other.intent.modalities, ["image", "text"])
+
+    def test_a_different_language_does_not_reuse_the_profile(self):
+        with tempfile.TemporaryDirectory() as directory:
+            orchestrator = Orchestrator(store=ProfileStore(Path(directory)))
+            orchestrator.autopilot("local code review AI, latency first", mode="mock")
+            other = orchestrator.autopilot("本地代码审查 AI，速度优先", mode="mock")
+        self.assertFalse(other.profile_reused)
+        self.assertEqual(other.intent.preferred_language, ["zh", "en"])
 
     def test_a_saved_profile_round_trips_through_disk(self):
         with tempfile.TemporaryDirectory() as directory:

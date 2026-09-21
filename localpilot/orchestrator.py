@@ -23,6 +23,21 @@ from localpilot.schemas import (
 from localpilot.utils import append_event, stable_hash, utc_now
 
 
+def profile_requirements(intent) -> dict:
+    """Requirement axes whose change can invalidate a serving profile."""
+    return {
+        "task": intent.task,
+        "privacy": intent.privacy,
+        "priority": intent.priority,
+        "quality": intent.quality,
+        "context_length": intent.context_length,
+        "concurrency": intent.concurrency,
+        "capabilities": sorted(intent.capabilities),
+        "modalities": sorted(intent.modalities),
+        "languages": sorted(intent.preferred_language),
+    }
+
+
 class Orchestrator:
     """Runs the loop: understand, profile, plan, execute, judge, remember.
 
@@ -76,6 +91,7 @@ class Orchestrator:
         text: str,
         mode: str = "auto",
         reuse_profile: bool = True,
+        activate_profile: bool = True,
         progress: Callable[[AgentStep], None] = None,
     ) -> AutopilotResult:
         """Runs the loop.
@@ -167,7 +183,12 @@ class Orchestrator:
         )
 
         profile = self._save_profile(
-            intent, hardware, best, resolved_mode, simulated
+            intent,
+            hardware,
+            best,
+            resolved_mode,
+            simulated,
+            activate_profile=activate_profile,
         )
         emit(
             AgentStep(
@@ -175,7 +196,8 @@ class Orchestrator:
                 action="save_profile",
                 status="success",
                 detail=(
-                    f"Profile {profile.profile_key} stored for "
+                    f"Profile {profile.profile_key} "
+                    f"{'activated' if activate_profile else 'staged'} for "
                     f"{intent.task}/{intent.priority} on this fingerprint"
                 ),
                 data={"profile_key": profile.profile_key},
@@ -221,8 +243,13 @@ class Orchestrator:
         trace: List[AgentStep],
         emit: Callable[[AgentStep], AgentStep],
     ) -> Optional[AutopilotResult]:
+        requirements = self._profile_requirements(intent)
         cached = self.store.find_match(
-            hardware.fingerprint, intent.task, intent.priority, simulated
+            hardware.fingerprint,
+            intent.task,
+            intent.priority,
+            simulated,
+            requirements,
         )
         if cached is None:
             return None
@@ -289,14 +316,20 @@ class Orchestrator:
         return result
 
     def _save_profile(
-        self, intent, hardware, best, resolved_mode: str, simulated: bool
+        self,
+        intent,
+        hardware,
+        best,
+        resolved_mode: str,
+        simulated: bool,
+        activate_profile: bool = True,
     ) -> SavedProfile:
         now = utc_now()
+        requirements = self._profile_requirements(intent)
         profile_key = stable_hash(
             {
                 "hardware": hardware.fingerprint,
-                "task": intent.task,
-                "priority": intent.priority,
+                "requirements": requirements,
                 "candidate": best.candidate.candidate_id,
                 "runtime": resolved_mode,
             }
@@ -320,9 +353,20 @@ class Orchestrator:
             created_at=now,
             last_verified_at=now,
             platform_id=hardware.platform_id,
+            requirements=requirements,
         )
-        self.store.save(profile)
+        self.store.save(profile, activate=activate_profile)
         return profile
+
+    @staticmethod
+    def _profile_requirements(intent) -> dict:
+        """Return only requirement axes that can change a serving decision.
+
+        Raw wording is deliberately excluded so semantically identical asks
+        can reuse a profile. Any parsed constraint that affects model fit,
+        runtime shape, or acceptance must match exactly.
+        """
+        return profile_requirements(intent)
 
     def _verify_cached(self, profile: SavedProfile) -> bool:
         try:

@@ -11,7 +11,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from localpilot.utils import load_data_file, project_home
+from localpilot.utils import config_file, load_data_file
+
+
+DEFAULT_BASE_URLS = {"ollama": "http://127.0.0.1:11434"}
 
 
 @dataclass
@@ -55,7 +58,7 @@ def configured_base_url(engine_id: str) -> Optional[str]:
         value = os.environ.get(variable)
         if value:
             return value.rstrip("/")
-    return None
+    return DEFAULT_BASE_URLS.get(engine_id)
 
 
 def served_models(engine_id: str, base_path: str = "/v1") -> List[str]:
@@ -206,7 +209,7 @@ def probe_engine(spec: EngineSpec) -> Dict[str, Any]:
 
 class EngineRegistry:
     def __init__(self, path: Path = None) -> None:
-        self.path = path or (project_home() / "config" / "engines.yaml")
+        self.path = path or config_file("engines.yaml")
         self._cache: Optional[List[EngineSpec]] = None
 
     def all(self) -> List[EngineSpec]:

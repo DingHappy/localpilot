@@ -71,7 +71,7 @@
 <text class="step"  x="68" y="368">3 · RECALL</text>
 <text class="title" x="68" y="392">Has this exact question been answered here before?</text>
 <text class="mod"   x="68" y="412">profiles/store.py</text>
-<text class="body"  x="68" y="428">A profile keyed on hardware fingerprint + task + priority,</text>
+<text class="body"  x="68" y="428">A profile keyed on hardware + acceptance requirements,</text>
 <text class="body"  x="68" y="442">re-verified by a live health check before it is trusted.</text>
 
 <path class="edge" d="M 318 448 L 318 470" marker-end="url(#arrow)"/>
@@ -159,7 +159,7 @@
 <text class="step"  x="720" y="712">8 · REMEMBER</text>
 <text class="title" x="720" y="736">So the next identical ask is a lookup, not a search</text>
 <text class="mod"   x="720" y="756">profiles/store.py · reporting.py</text>
-<text class="body"  x="720" y="772">profile keyed on fingerprint + task + priority · exported to results/</text>
+<text class="body"  x="720" y="772">profile keyed on hardware + requirements · exported to results/</text>
 
 <path class="edge-accent" d="M 966 780 L 966 802" marker-end="url(#arrow-accent)"/>
 

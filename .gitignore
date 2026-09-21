@@ -1,4 +1,5 @@
 .env
+.DS_Store
 .venv/
 __pycache__/
 *.py[cod]
@@ -12,8 +13,9 @@ build/
 # and would only add noise here.
 profiles/*.json
 profiles/runs/
+profiles/control/
 logs/*.jsonl
-models/
+/models/
 
 # results/ is the opposite: curated exports from `localpilot report`, kept
 # in version control because a measurement nobody can review is not
@@ -21,4 +23,3 @@ models/
 !results/
 !results/*.md
 !results/*.json
-

@@ -7,6 +7,7 @@ from localpilot.runtime.mock import MockRuntime
 from localpilot.runtime.openai_compat import (
     LlamaCppRuntime,
     NIMRuntime,
+    OllamaRuntime,
     SGLangRuntime,
     TRTLLMRuntime,
     VLLMRuntime,
@@ -19,6 +20,7 @@ RUNTIMES: Dict[str, Callable[[], RuntimeProvider]] = {
     "sglang": SGLangRuntime,
     "nim": NIMRuntime,
     "llamacpp": LlamaCppRuntime,
+    "ollama": OllamaRuntime,
 }
 
 

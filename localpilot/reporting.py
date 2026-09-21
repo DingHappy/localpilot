@@ -129,6 +129,12 @@ def render_markdown(run: Dict[str, Any]) -> str:
             ])
             continue
         score = item.get("score")
+        memory_source = (benchmark.get("raw") or {}).get("peak_memory_source")
+        memory_suffix = (
+            " GB est."
+            if memory_source == "planner_estimate_no_readable_source"
+            else " GB"
+        )
         rows.append([
             f"{candidate.get('model_id')}{mark}",
             str(candidate.get("engine")),
@@ -137,13 +143,13 @@ def render_markdown(run: Dict[str, Any]) -> str:
             _number(benchmark.get("ttft_ms"), 0, " ms"),
             _number(benchmark.get("throughput_tokens_s")),
             _number(benchmark.get("aggregate_throughput_tokens_s")),
-            _number(benchmark.get("peak_memory_gb"), 1, " GB"),
+            _number(benchmark.get("peak_memory_gb"), 1, memory_suffix),
             _number(score, 1) if score is not None
             else "gated: " + "; ".join(item.get("gate_failures") or []),
         ])
     lines.append(_table(rows, [
         "model", "engine", "precision", "flags", "ttft",
-        "tok/s/stream", "tok/s aggregate", "peak memory", "score",
+        "tok/s/stream", "tok/s aggregate", "memory", "score",
     ]))
     lines.append("")
 
@@ -175,6 +181,14 @@ def render_markdown(run: Dict[str, Any]) -> str:
     lines.append("## Chosen configuration")
     lines.append("")
     benchmark = best.get("benchmark") or {}
+    memory_source = (benchmark.get("raw") or {}).get(
+        "peak_memory_source", "-"
+    )
+    memory_label = (
+        "Estimated memory"
+        if memory_source == "planner_estimate_no_readable_source"
+        else "Peak memory"
+    )
     detail = [
         ["Model", str(winner.get("model_id"))],
         ["Source", f"`{winner.get('source_id')}`"],
@@ -190,8 +204,8 @@ def render_markdown(run: Dict[str, Any]) -> str:
     detail.extend([
         ["TTFT", _number(benchmark.get("ttft_ms"), 2, " ms")],
         ["Decode", _number(benchmark.get("throughput_tokens_s"), 2, " tok/s")],
-        ["Peak memory", _number(benchmark.get("peak_memory_gb"), 2, " GB")],
-        ["Peak memory source", str((benchmark.get("raw") or {}).get("peak_memory_source", "-"))],
+        [memory_label, _number(benchmark.get("peak_memory_gb"), 2, " GB")],
+        ["Memory source", str(memory_source)],
         ["Quality (blended)", _number(benchmark.get("quality"), 3)],
         ["Quality (keyword)", _number(benchmark.get("quality_keyword"), 3)],
         ["Quality (rubric)", _number(benchmark.get("quality_judge"), 3)],
@@ -206,12 +220,32 @@ def render_markdown(run: Dict[str, Any]) -> str:
                      "reachable, so the figure is weak and is reported as such.")
         lines.append("")
 
+    if memory_source == "planner_estimate_no_readable_source":
+        lines.append("Memory is a planner estimate because the engine exposed "
+                     "no readable allocation metric; it is not an observed peak.")
+        lines.append("")
+
     lines.append("## Agent trace")
     lines.append("")
     lines.append("```")
+    memory_sources = {
+        (item.get("candidate") or {}).get("candidate_id"):
+        ((item.get("benchmark") or {}).get("raw") or {}).get(
+            "peak_memory_source"
+        )
+        for item in candidates
+    }
     for step in run.get("agent_trace") or []:
+        detail_text = str(step.get("detail"))
+        step_data = step.get("data") or {}
+        if (
+            step.get("action") == "measure_candidate"
+            and memory_sources.get(step_data.get("candidate_id"))
+            == "planner_estimate_no_readable_source"
+        ):
+            detail_text = detail_text.replace(" GB peak", " GB estimated memory")
         lines.append(f"[{step.get('agent'):9s}] {step.get('action'):22s} "
-                     f"{step.get('status'):9s} {step.get('detail')}")
+                     f"{step.get('status'):9s} {detail_text}")
     lines.append("```")
     lines.append("")
 
