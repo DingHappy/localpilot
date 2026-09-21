@@ -92,6 +92,7 @@ Skill 的核心作用是：
 - 检查服务健康；
 - 测量 TTFT、单流吞吐、聚合吞吐和峰值内存；
 - 使用关键词和可选 Judge 信号评价输出；
+- 对带标准字段的文档测试集，直接核对 JSON 字段、值和类型，分别报告字段准确率与整张文档通过率；
 - 根据显式策略排名；
 - 保存硬件相关 Profile；
 - 在后续请求中尝试复用 Profile；
@@ -115,18 +116,27 @@ vLLM 服务向 Step3-VL-10B-FP8 发送一张内嵌合成测试图，连续完成
 本次实测 TTFT 为 98.76 ms，单流解码为 20.19 tok/s，报告记录的峰值内存为
 55.04 GB，来源是引擎报告的权重与已分配 KV 内存。
 
+随后在同一服务上完成了 6 张合成英文票据的字段验收：30/30 个字段精确匹配，
+6/6 张文档全部通过，JSON 有效率 100%，请求失败 0。3 次独立性能请求的平均
+首字延迟约 0.95 秒，完整响应平均约 12.35 秒。此结果只适用于该小型合成数据集，
+且尚未达到此前设想的完整响应低于 2 秒目标。
+
 ## 4. 当前不能过度声称的能力
 
-### 4.1 已证明图片链路，尚未证明真实文档业务效果
+### 4.1 已证明合成票据字段验收，尚未证明真实文档业务效果
 
 最新报告已经证明图片被实际组装进 OpenAI 兼容请求，并在 DGX Spark 上完成
 3 次非模拟测量。合成测试图的红、蓝、绿三个确定性字段全部命中，说明从
 LocalPilot 基准集、请求构造到视觉模型响应的图片链路已经跑通。
 
+新的合成票据验收进一步证明了 6 张干净英文图片上的字段提取，包含票据编号、
+日期、金额、卖方及可缺省的采购单号。验收使用严格 JSON 字段比较，字段准确率
+与整张文档通过率分别记录，失败请求仍进入分母；没有调用独立语义 Judge。
+
 这仍不能证明：
 
-- 发票 OCR 或复杂文档理解可用；
-- 发票号码、金额、日期等业务字段达到目标准确率；
+- 中文税务发票、扫描件、倾斜或低清文档的 OCR 可用；
+- 真实业务数据分布上的字段准确率达到目标；
 - `local_only` 已由网络策略强制执行，而不只是本次使用回环端点；
 - 多个视觉候选之间完成了有效比较；
 - 没有独立 Judge 时，开放式视觉回答具备可靠质量。
@@ -156,12 +166,12 @@ LocalPilot 基准集、请求构造到视觉模型响应的图片链路已经跑
 
 ### 4.4 显式需求变化已经纳入 Profile，持续漂移检测尚未实现
 
-当前 Profile 匹配已经纳入硬件指纹、任务、优先方向、模拟状态、隐私、质量等级、上下文长度、并发量、输入模态、能力要求和语言。上述结构化条件发生变化时，旧 Profile 不会直接复用；完全匹配时也会先执行启动与健康检查。
+当前 Profile 匹配已经纳入硬件指纹、任务、优先方向、模拟状态、隐私、质量等级、上下文长度、并发量、输入模态、能力要求、语言和基准配置哈希。上述结构化条件或验收集内容发生变化时，旧 Profile 不会直接复用；完全匹配时也会先执行启动与健康检查。
 
 仍未完整纳入或实现的部分包括：
 
 - 具体质量、延迟和吞吐 SLA；
-- 验收集及其版本；
+- 独立 Judge 的模型与评分规则版本；
 - 模型 revision、引擎、驱动和容器版本的完整环境指纹；
 - 业务流量、性能、资源和质量漂移的后台持续检测；
 - 变化后的在线排空、Canary、切换和自动回滚。
@@ -384,7 +394,7 @@ Planner、Bench、Judge 的职责划分是合理架构，但 Agent 数量本身�
 1. 修复 `localpilot/models` 被 Git 忽略的问题；
 2. 把运行所需配置正确打包；
 3. 完成全新目录的克隆、安装和启动验收；
-4. ~~视觉任务真正发送图片并使用确定性字段指标；~~ 已用三色合成图完成真实链路验收，下一步升级为合成发票字段集；
+4. ~~视觉任务真正发送图片并使用确定性字段指标；~~ 已完成三色图与 6 张合成票据、30 个字段的实机验收，下一步扩展真实场景覆盖并优化完整响应时间；
 5. 把状态拆分为 `MEASURED`、`SELECTED`、`DEPLOYED`、`READY`；
 6. 获胜配置部署后保持服务在线，并进行真实 API 验收；
 7. 为 Profile 加入需求和环境指纹；
@@ -449,7 +459,9 @@ Planner、Bench、Judge 的职责划分是合理架构，但 Agent 数量本身�
 
 - LocalPilot Skill：[`SKILL.md`](../.agents/skills/local-ai-autopilot/SKILL.md)
 - CLI 合约：[`cli.md`](../.agents/skills/local-ai-autopilot/references/cli.md)
-- 最新真实视觉报告：[`results/20260921T124614-real-vision-quality.md`](../results/20260921T124614-real-vision-quality.md)
+- 最新真实票据字段报告：[`results/20260921T130219-real-vision-quality.md`](../results/20260921T130219-real-vision-quality.md)
+- 票据验收结论：[`results/20260921-document-field-validation.md`](../results/20260921-document-field-validation.md)
+- 真实图片链路报告：[`results/20260921T124614-real-vision-quality.md`](../results/20260921T124614-real-vision-quality.md)
 - 真实视觉验收说明：[`results/20260921-real-vision-validation.md`](../results/20260921-real-vision-validation.md)
 - 早期真实文本链路报告：[`results/20260920T170725-real-vision-balanced.md`](../results/20260920T170725-real-vision-balanced.md)
 - NVIDIA DGX Spark 硬件说明：[docs.nvidia.com/dgx/dgx-spark/hardware.html](https://docs.nvidia.com/dgx/dgx-spark/hardware.html)

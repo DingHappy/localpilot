@@ -290,11 +290,27 @@ The filename carries `-real-` or `-sim-`, the report states the label above
 the numbers, and every comparison in it names the axes on which the pair
 differed.
 
-The latest committed DGX Spark vision evidence is
+The initial committed DGX Spark image-path evidence is
 [`results/20260921T124614-real-vision-quality.md`](results/20260921T124614-real-vision-quality.md).
 It records three real image requests and an all-fields match on a deterministic
 three-color image. This validates the image request path; it does not establish
 invoice OCR accuracy or a comparison between models.
+
+For document-field acceptance, the optional
+[`evals/documents`](evals/documents/README.md) dataset contains six synthetic
+invoice images and 30 labeled fields. Set `LOCALPILOT_BENCHMARK_CONFIG` to its
+`benchmark.json` to select it. The evaluator checks exact JSON keys, values,
+and types, counts failed requests as incorrect, and reports field and whole
+document accuracy separately. Expected answers never enter inference payloads.
+The benchmark configuration hash is part of profile matching, so changing the
+test set invalidates reuse of an older acceptance result.
+
+The [real document run](results/20260921T130219-real-vision-quality.md) matched
+30/30 fields across 6/6 synthetic documents on DGX Spark. Three separate timing
+requests averaged 949.58 ms to first token and 12,353.37 ms to completion.
+These small-sample results do not establish production invoice accuracy or
+configuration optimization; see the
+[validation scope](results/20260921-document-field-validation.md).
 
 ## How the measurement is taken
 
