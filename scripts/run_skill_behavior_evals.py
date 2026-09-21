@@ -105,8 +105,12 @@ elif command == "benchmark":
     print(json.dumps({"simulated": simulated, "ttft_ms": 125, "throughput_tokens_s": 23, "peak_memory_gb": 20, "raw": {"peak_memory_source": "planner_estimate_no_readable_source"}}))
 elif command in {"reconcile", "watch"}:
     print(json.dumps({"decision": "KEEP", "actionable": False, "reasons": ["within guarded bands"]}))
-elif command in {"drain", "activate", "rollback", "resume"}:
-    print(json.dumps({"status": command.upper(), "drained": command == "drain", "profile_key": "fixture-profile"}))
+elif command == "drain":
+    print(json.dumps({"status": "DRAINED", "drained": True, "accepting": False, "active_requests": 0}))
+elif command in {"activate", "rollback"}:
+    print(json.dumps({"status": "ACTIVATED", "profile_key": profile_key, "probe_status": "passed", "traffic": {"accepting": False, "active_requests": 0}}))
+elif command == "resume":
+    print(json.dumps({"status": "SERVING", "accepting": True, "active_requests": 0}))
 else:
     print(json.dumps({"status": "fixture", "command": command}))
 '''
