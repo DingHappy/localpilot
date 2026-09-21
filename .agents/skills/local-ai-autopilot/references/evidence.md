@@ -24,7 +24,17 @@ Use these rules when reading, comparing, or publishing LocalPilot results.
   the source is `planner_estimate_no_readable_source`, the value is estimated.
 - For concurrency above one, distinguish per-stream throughput from aggregate
   throughput.
-- A null `quality_judge` leaves only weak quality evidence.
+- A null `quality_judge` with no `raw.structured_quality` leaves only weak
+  keyword evidence. Deterministic field acceptance instead records exact field
+  and document matches against a labeled dataset. State its sample count and
+  scope; passing a fixed dataset does not establish general semantic quality.
+- Quality and latency should describe the same responses in a controlled pair.
+  Count failed or truncated responses; do not count repeated images as new inputs.
+- Distinguish first-token latency from mean complete response and from P95.
+  A `max_total_latency_ms` gate uses the measured mean, not a tail guarantee.
+- Benchmark and acceptance-policy hashes identify the evidence used for reuse.
+  Changing either requires fresh acceptance; `READY` alone is not evidence of
+  continuous serving or that request options were applied by an application.
 - A recovery candidate records `fallback_of` and `recovery_action`.
 
 ## Comparisons

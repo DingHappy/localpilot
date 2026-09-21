@@ -1,104 +1,96 @@
 ---
 name: local-ai-autopilot
-description: Use only for LocalPilot-specific work on one Apple Silicon or one NVIDIA/CUDA inference target, locally or over SSH. Activate when the user wants to inspect that target, size or select a model and engine, benchmark or accept a serving configuration, remeasure it, respond to requirement or workload drift, or interpret an existing LocalPilot report. Produce evidence-labelled decisions that distinguish measured, estimated, and simulated results. A model, engine, GPU, or deployment mention by itself is insufficient.
+description: Use only for LocalPilot-specific inference configuration work on one Apple Silicon or one NVIDIA/CUDA target, locally or over SSH. Inspect the target, select model and engine candidates, attempt measured acceptance, compare configurations, respond to changed requirements, and hand off reusable configuration with evidence. A model, engine, GPU, or deployment mention by itself is insufficient.
 ---
 
 # Local AI Autopilot
 
-Use LocalPilot as the inspection, planning, acceptance, and profile-memory
-tool. Interpret the user's goal and the CLI evidence; never replace a required
-check with intuition or invent a measurement.
+Help the user configure inference for their task and verify whether it meets
+that task's requirements. Use LocalPilot CLI for inspection, planning,
+measurement and profile memory; use the installed inference engine to run models.
+Applications can call that engine directly. A LocalPilot inference gateway,
+continuous monitoring or automatic traffic routing is not a prerequisite.
 
 ## Preconditions
 
-Before using a LocalPilot workflow, verify that its executable is available:
+Before executing a workflow, verify the CLI independently from this Skill:
 
 ```bash
 command -v localpilot
 localpilot --version
 ```
 
-This Skill targets the LocalPilot `0.2.x` CLI contract. Report another major
-or minor series as incompatible until its command contract is reviewed.
+This Skill targets the LocalPilot `0.2.x` command contract. Review the contract
+before using a different major/minor series. Check newer optional commands with
+`--help`; a version match alone does not prove that a particular feature exists.
+For an SSH target, verify its CLI with
+`localpilot --target ssh://user@host --version` and add that target to commands
+that should run there. The remote node needs the CLI, not a copy of this Skill.
+If prerequisites are missing, report the gap; do not install them implicitly.
+Read-only interpretation of supplied reports needs no CLI or device connection.
 
-For an SSH target, verify the node through LocalPilot's target mechanism:
+## Route by user goal
 
-```bash
-localpilot --target ssh://user@host --version
-```
-
-If the CLI is absent or incompatible, report that prerequisite and stop. Do
-not install it implicitly. If an engine is absent, mock mode may validate the
-orchestration, but real target acceptance remains outstanding.
-
-## Route by intent
-
-Choose the smallest workflow that answers the request:
+Choose the smallest useful workflow; do not run a full search for every request.
 
 | User goal | Workflow |
 |---|---|
-| Inspect the machine or engines | `doctor` and/or `engines` |
+| Inspect hardware or engines | `doctor` and/or `engines` |
 | Analyse capacity and candidates | `doctor` → `registry` → `recommend` |
-| Run complete acceptance | `autopilot` |
+| Run task acceptance | `autopilot` with the appropriate benchmark configuration |
+| Validate for handoff without changing the active Profile | `stage` → `report` |
 | Re-measure an active profile | `status` → `benchmark` |
-| Detect workload or requirement drift | `watch` or `reconcile` |
-| Apply a validated configuration | `stage` → `drain` → `activate` → `resume` |
-| Interpret an existing report | Read the supplied JSON or Markdown only |
-| Explain a performance difference | Inspect every differing axis; run a controlled pair only if needed |
+| Respond to a changed task | Compare requirements and acceptance data; run a fresh bounded acceptance when needed |
+| Compare speed or quality | Read [optimization.md](references/optimization.md); use a controlled pair if measurements are needed |
+| Interpret results | Read existing JSON/Markdown only |
+| Deliver a reusable configuration | Read [handoff.md](references/handoff.md); provide the engine endpoint, configuration, request example and evidence |
 
-Add `--target ssh://user@host` to every command that belongs on a remote node.
-Use `registry --simulate` only when the user explicitly wants the simulated
-DGX Spark model. Registry otherwise sizes against the detected target.
+`registry` sizes against the execution target. Use `--simulate` only for an
+explicitly requested simulated DGX development profile. Model entries and
+engine feature declarations are candidate metadata, not proof of compatibility.
 
-## Evidence contract
+## Acceptance and evidence
 
-- A result is measured only when both `hardware.simulated` and
-  `benchmark.simulated` are false.
-- Preserve capacity rejections, gate failures, recovery actions, and the
-  exact target that produced the evidence.
-- Reject candidates that lack a required modality or capability; never infer
-  image, document, audio, tool-use, or structured-output support from a model
-  name alone.
-- Invalidate profile reuse when task, privacy, priority, quality, context,
-  concurrency, capabilities, modalities, or languages change.
-- A successful candidate merely ran; it wins only after gates and ranking.
-- Do not infer that one knob caused a difference when other axes changed.
-- If `quality_judge` is null, describe quality evidence as weak.
-- For concurrency above one, always distinguish per-stream throughput from
-  aggregate throughput.
-- Treat peak memory as observed only when `peak_memory_source` identifies an
-  engine or sampled pool; otherwise it is an estimate.
+- A measurement requires both hardware and benchmark `simulated` to be false.
+- Preserve capacity rejections, failed requests, failed gates and their run IDs.
+  `REJECTED` with no best Profile is a reviewable failure, not a deployment.
+- Reject candidates missing required modalities or capabilities; do not infer
+  support from a model name.
+- Requirements, benchmark contents or acceptance-policy changes invalidate old
+  acceptance evidence. Inspect stored requirements and hashes before reuse.
+- A successful request is not a winning configuration. Apply quality and
+  stability gates before ranking; use complete response time for completion budgets.
+- Distinguish keyword-only evidence, independent rubric grading and deterministic
+  field checks. Exact checks support claims only about their labeled dataset.
+- A single candidate cannot prove optimization gain. For comparisons, name the
+  changed axes, keep quality checks comparable and distinguish repeated samples
+  from new inputs. Report per-stream and aggregate throughput separately.
+- Describe memory as observed only when its recorded source is an engine or
+  sampled pool; a planner fallback remains an estimate.
 
-Read [references/evidence.md](references/evidence.md) before interpreting or
-publishing results.
+Read [evidence.md](references/evidence.md) before interpreting or publishing results.
 
-## Target and safety rules
+## Scope and completion
 
-- The controller may be any machine with the Agent, Python, LocalPilot, and
-  SSH. Hardware and benchmark evidence must come from the inference target.
-- Never download weights, install drivers, change PATH or system Python, or
-  modify system services implicitly.
-- Bind the API to `127.0.0.1` unless the user authorizes exposure.
-- Keep prompts, user code, model output, credentials, and SSH passwords out of
-  logs, reports, and target URIs.
-- Use a separate deployment for the judge; a candidate must not certify
-  itself.
-- Do not react to one transient spike. Respect reconcile windows and cooldowns.
-- Before a serving change, drain traffic. Validate and prewarm before
-  activation, retain the previous profile, and always resume after success or
-  an aborted attempt.
-- If every candidate fails, return the structured errors and the smallest
-  reversible next step. Do not expand or retry beyond the configured limit.
+Complete the requested inspection, proposal, acceptance or handoff. For handoff,
+state what was measured, what configuration and request strategy to use, and
+what remains unverified. A stored `READY` Profile does not prove a continuously
+available service or automatically apply request options to the user's app.
 
-## References
+Do not download weights, install drivers, edit system services or replace a
+running configuration implicitly. Preserve existing workloads; before an
+explicitly requested serving change, establish the actual engine's change and
+recovery procedure. Keep secrets and user content out of exported evidence.
+Use bounded candidates and recovery; report failure instead of expanding the
+search or silently relaxing acceptance gates.
 
-- Read [references/cli.md](references/cli.md) for commands, targets, and
-  guarded configuration changes.
-- Read [references/platforms.md](references/platforms.md) when platform
-  characteristics affect candidate selection.
-- Read [references/composition.md](references/composition.md) only when the
-  task may continue into an NVIDIA, Jetson, or engine-specific workflow.
-- Read [references/installation.md](references/installation.md) when installing
-  or updating this Skill.
-- Read [references/evaluation.md](references/evaluation.md) only when changing,
-  reviewing, or benchmarking the Skill itself.
+## Conditional references
+
+- [cli.md](references/cli.md): core commands and local/SSH execution.
+- [platforms.md](references/platforms.md): platform-specific candidate constraints.
+- [composition.md](references/composition.md): another specialised Skill is needed
+  for the user's requested next step and is available in this environment.
+- [service-management.md](references/service-management.md): only when the user
+  explicitly requests existing LocalPilot API, telemetry or guarded service control.
+- [installation.md](references/installation.md): installing or updating this Skill.
+- [evaluation.md](references/evaluation.md): developing or evaluating this Skill.

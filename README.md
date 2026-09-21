@@ -205,23 +205,22 @@ localpilot stage         measure and save a candidate without activating it
 localpilot deploy        autopilot by task and priority
 localpilot optimize      the same, for re-tuning
 localpilot benchmark     re-measure the active profile
-localpilot reconcile     turn one drift observation into a safe adjustment plan
-localpilot watch         poll live API telemetry until a plan needs action
-localpilot drain         stop new API work and wait for in-flight requests
-localpilot resume        reopen traffic after a drain or aborted change
-localpilot activate      prewarm, probe, and activate a staged profile
-localpilot rollback      activate a previous profile through the same safe path
 localpilot status        the active configuration
 localpilot profiles      what has been remembered
 localpilot report        export a run to results/ as Markdown and JSON
 localpilot demo          the A/B story
-localpilot serve         dashboard and OpenAI-compatible API
-localpilot stop          release LocalPilot state, keep weights and profiles
 ```
 
 `--json` everywhere output is meant to be parsed.
 [`references/cli.md`](.agents/skills/local-ai-autopilot/references/cli.md) is the
 full contract.
+
+The default deliverable is an engine configuration, a direct-engine request
+example, and acceptance evidence. Applications can call vLLM or Ollama directly.
+The existing `serve`, `reconcile`, `watch`, `drain`, `activate`, `rollback`,
+`resume` and `stop` commands remain auxiliary features; they are not prerequisites
+for configuration handoff. Their contract is in
+[optional service management](.agents/skills/local-ai-autopilot/references/service-management.md).
 
 ## The Agent Skill
 
@@ -233,10 +232,13 @@ and gives the next concrete step instead of assuming that dependency exists.
 The optional routing contract lives in
 [`references/composition.md`](.agents/skills/local-ai-autopilot/references/composition.md).
 
-What it adds is the part none of those do: generate a candidate set, measure
-the candidates against each other, grade output quality against a rubric,
-rank under an explicit priority policy, and persist the winner so the next run
-is a lookup.
+The Skill guides target inspection, candidate selection, task acceptance and
+configuration handoff. It uses explicit quality/time gates, deterministic field
+checks or separately identified rubric evidence, and bounded comparisons when
+needed. Saved configurations may be reused only while their requirements and
+acceptance evidence remain valid. See
+[optimization](.agents/skills/local-ai-autopilot/references/optimization.md) and
+[handoff](.agents/skills/local-ai-autopilot/references/handoff.md).
 
 ![LocalPilot as the decision and memory layer above NVIDIA's per-task skills](docs/architecture-skill.svg)
 

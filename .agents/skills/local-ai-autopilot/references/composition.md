@@ -7,8 +7,9 @@ LocalPilot establishes the configuration or encounters a boundary.
 Use a specialised Skill only when it is discoverable in the current Agent
 environment:
 
-- A Dynamo Skill may continue into serving recipes or routing after LocalPilot
-  selects and validates a configuration.
+- A Dynamo Skill may help with serving recipes or routing only if the user
+  requests that additional work. Selecting a configuration does not itself
+  authorize introducing a gateway or expanding into traffic management.
 - A Jetson Skill should own JetPack, driver, and Jetson-specific serving or
   tuning work. LocalPilot does not configure Jetson systems.
 - An engine-specific troubleshooting Skill may continue after LocalPilot's

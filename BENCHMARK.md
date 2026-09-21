@@ -4,6 +4,11 @@ This benchmark tests whether an Agent completes LocalPilot tasks more reliably
 when the `local-ai-autopilot` Skill is discoverable. It measures Agent behavior,
 not model-serving speed and not DGX Spark hardware performance.
 
+The results below apply to Skill commit `42112469baacbb0765a3967197cff293e761f6aa`.
+The later configuration-handoff scope revision and new optimization references
+have structural/installation checks, but have not rerun this Agent behavior
+benchmark. Do not treat the historical rates as verified rates for the revision.
+
 ## Result
 
 **Run status: failed one strict release gate.** The Skill met five of six gates.
