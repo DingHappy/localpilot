@@ -27,4 +27,5 @@ class BenchmarkRunner:
         result.raw["benchmark_config_sha256"] = stable_hash(config)
         result.raw["benchmark_dataset_id"] = config.get("dataset_id")
         result.raw["max_new_tokens"] = int(config.get("max_new_tokens", 64))
+        result.raw["acceptance"] = config.get("acceptance", {})
         return result

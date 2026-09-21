@@ -105,6 +105,7 @@ class Orchestrator:
         run_id = str(uuid.uuid4())
         started_at = utc_now()
         intent = parse_intent(text)
+        acceptance = load_benchmark_config().get("acceptance", {})
         resolved_mode = self.resolve_mode(mode)
         simulated = resolved_mode == "mock"
         hardware = self.profiler.profile(simulate=simulated)
@@ -158,7 +159,10 @@ class Orchestrator:
             candidates, intent.task, resolved_mode, hardware, models
         )
 
-        best = self.optimizer.choose(results, intent.priority)
+        if acceptance:
+            best = self.optimizer.choose(results, intent.priority, acceptance=acceptance)
+        else:
+            best = self.optimizer.choose(results, intent.priority)
         emit(
             AgentStep(
                 agent="optimizer",
@@ -170,6 +174,7 @@ class Orchestrator:
                 ),
                 data={
                     "winner": best.candidate.candidate_id,
+                    "acceptance": acceptance,
                     "score": best.score,
                     "components": best.score_components,
                     "ranking": [

@@ -5,6 +5,7 @@ import os
 from typing import Any, Dict, List
 
 from localpilot.utils import config_file, load_data_file
+from localpilot.benchmark.acceptance import validate_acceptance
 
 
 FALLBACK_TASK = "chat"
@@ -13,7 +14,9 @@ FALLBACK_TASK = "chat"
 def load_benchmark_config(path: Path = None) -> Dict[str, Any]:
     override = os.environ.get("LOCALPILOT_BENCHMARK_CONFIG")
     target = path or (Path(override).expanduser() if override else config_file("benchmark.yaml"))
-    return load_data_file(target)
+    config = load_data_file(target)
+    validate_acceptance(config.get("acceptance", {}))
+    return config
 
 
 def prompts_for_task(task: str, path: Path = None) -> List[Dict[str, Any]]:

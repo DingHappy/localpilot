@@ -203,6 +203,7 @@ def render_markdown(run: Dict[str, Any]) -> str:
         detail.append(["Speculative draft", f"`{speculative.get('draft_source_id')}`"])
     detail.extend([
         ["TTFT", _number(benchmark.get("ttft_ms"), 2, " ms")],
+        ["Complete response (mean)", _number(benchmark.get("total_latency_ms"), 2, " ms")],
         ["Decode", _number(benchmark.get("throughput_tokens_s"), 2, " tok/s")],
         [memory_label, _number(benchmark.get("peak_memory_gb"), 2, " GB")],
         ["Memory source", str(memory_source)],
@@ -215,6 +216,16 @@ def render_markdown(run: Dict[str, Any]) -> str:
     lines.append(_table(detail, ["field", "value"]))
     lines.append("")
 
+    acceptance = (benchmark.get("raw") or {}).get("acceptance")
+    if acceptance:
+        lines.append("## Acceptance policy")
+        lines.append("")
+        lines.append(_table([[key, str(value)] for key, value in acceptance.items()], ["constraint", "value"]))
+        lines.append("")
+        lines.append("Latency limits apply to the measured mean complete response, not TTFT or a tail-latency guarantee. "
+                     "A single accepted candidate does not demonstrate an optimization gain. "
+                     "Reproduce with the same LOCALPILOT_BENCHMARK_CONFIG.")
+        lines.append("")
     structured = (benchmark.get("raw") or {}).get("structured_quality")
     if structured:
         lines.append("## Document field acceptance")

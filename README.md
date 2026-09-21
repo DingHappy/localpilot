@@ -305,6 +305,13 @@ document accuracy separately. Expected answers never enter inference payloads.
 The benchmark configuration hash is part of profile matching, so changing the
 test set invalidates reuse of an older acceptance result.
 
+Optional `acceptance` settings in that benchmark config let you choose
+`fastest_complete` with a `min_quality` floor, or `highest_quality` under a
+`max_total_latency_ms` budget. Candidates must pass the gates before selection.
+Without these settings, existing priority-weighted ranking is preserved.
+See [bounded optimization](docs/bounded-optimization-zh.md) for configuration
+examples and the limits of the evidence.
+
 The [real document run](results/20260921T130219-real-vision-quality.md) matched
 30/30 fields across 6/6 synthetic documents on DGX Spark. Three separate timing
 requests averaged 949.58 ms to first token and 12,353.37 ms to completion.
