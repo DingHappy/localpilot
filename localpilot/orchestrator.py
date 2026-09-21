@@ -11,7 +11,7 @@ from localpilot.executor.process import runtime_factory
 from localpilot.hardware.profiler import HardwareProfiler
 from localpilot.intent.parser import parse_intent
 from localpilot.models.registry import ModelRegistry
-from localpilot.optimizer.optimizer import Optimizer
+from localpilot.optimizer.optimizer import Optimizer, NoEligibleCandidate
 from localpilot.planner.planner import Planner
 from localpilot.profiles.store import ProfileStore
 from localpilot.schemas import (
@@ -38,6 +38,14 @@ def profile_requirements(intent) -> dict:
         "languages": sorted(intent.preferred_language),
         "benchmark_sha256": stable_hash(load_benchmark_config()),
     }
+
+
+class AutopilotRejected(RuntimeError):
+    """A rejected search with durable evidence, not a successful deployment."""
+
+    def __init__(self, run):
+        self.run = run
+        super().__init__(f"{run['error']} (run {run['run_id']}; export with localpilot report {run['run_id']})")
 
 
 class Orchestrator:
@@ -159,10 +167,32 @@ class Orchestrator:
             candidates, intent.task, resolved_mode, hardware, models
         )
 
-        if acceptance:
-            best = self.optimizer.choose(results, intent.priority, acceptance=acceptance)
-        else:
-            best = self.optimizer.choose(results, intent.priority)
+        try:
+            if acceptance:
+                best = self.optimizer.choose(results, intent.priority, acceptance=acceptance)
+            else:
+                best = self.optimizer.choose(results, intent.priority)
+        except NoEligibleCandidate as exc:
+            emit(AgentStep(
+                agent="optimizer", action="reject_all_candidates", status="failed",
+                detail=str(exc), data={"acceptance": acceptance, "candidate_count": len(results)},
+            ))
+            rejected = {
+                "run_id": run_id, "intent": intent.to_dict(),
+                "hardware": hardware.to_dict(),
+                "candidates": [item.to_dict() for item in results],
+                "best_profile": None, "profile_reused": False,
+                "status": "REJECTED", "error": str(exc),
+                "acceptance": acceptance, "execution_mode": resolved_mode,
+                "warnings": warnings,
+                "agent_trace": [step.to_dict() for step in trace],
+                "started_at": started_at, "finished_at": utc_now(),
+            }
+            self.store.save_run(run_id, rejected)
+            append_event("autopilot_rejected", {
+                "run_id": run_id, "candidate_count": len(results), "simulated": simulated,
+            })
+            raise AutopilotRejected(rejected) from exc
         emit(
             AgentStep(
                 agent="optimizer",

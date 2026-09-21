@@ -7,6 +7,10 @@ from localpilot.planner.scoring import score_results
 from localpilot.schemas import CandidateResult
 
 
+class NoEligibleCandidate(RuntimeError):
+    """Expected rejection after measuring or filtering the bounded candidates."""
+
+
 class Optimizer:
     def __init__(self, policies: PolicyEngine = None) -> None:
         self.policies = policies or PolicyEngine()
@@ -20,7 +24,7 @@ class Optimizer:
             errors = [item.error for item in results if item.error]
             errors.extend(f"{item.candidate.candidate_id}: {', '.join(item.gate_failures)}" for item in results if item.gate_failures)
             detail = "; ".join(errors) if errors else "quality or stability gate failed"
-            raise RuntimeError(f"No candidate passed optimization gates: {detail}")
+            raise NoEligibleCandidate(f"No candidate passed optimization gates: {detail}")
         if acceptance and acceptance.get("objective") in {"fastest_complete", "highest_quality"}:
             return max(eligible, key=lambda item: (item.score, -item.benchmark.total_latency_ms))
         return max(eligible, key=lambda item: item.score)

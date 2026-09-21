@@ -60,6 +60,10 @@ def render_markdown(run: Dict[str, Any]) -> str:
 
     lines: List[str] = []
     label = "SIMULATED" if simulated else "MEASURED"
+    if not best and not simulated and not any(
+        (item.get("benchmark") or {}).get("simulated") is False for item in candidates
+    ):
+        label = "NOT MEASURED"
     lines.append(f"# LocalPilot run — {intent.get('task')} / {intent.get('priority')}")
     lines.append("")
     lines.append(f"**{label}** · run `{run.get('run_id', '')[:8]}` · "
@@ -177,6 +181,26 @@ def render_markdown(run: Dict[str, Any]) -> str:
             lines.append(f"- **{data.get('model_id')}** [{data.get('gate')}] "
                          f"{data.get('reason')}")
         lines.append("")
+
+    if not best:
+        lines.extend(["## No accepted configuration", "",
+                      f"Status: **{run.get('status', 'REJECTED')}**", "",
+                      str(run.get("error") or "No candidate passed acceptance."), "",
+                      "No profile was selected or activated by this run.", ""])
+        acceptance = run.get("acceptance") or {}
+        if acceptance:
+            lines.extend(["## Acceptance policy", "",
+                          _table([[key, str(value)] for key, value in acceptance.items()], ["constraint", "value"]), "",
+                          "The latency budget applies to mean complete response time, not TTFT.", ""])
+        lines.extend(["## Agent trace", "", "```"])
+        for step in run.get("agent_trace") or []:
+            lines.append(f"[{step.get('agent')}] {step.get('action')}: {step.get('detail')}")
+        lines.extend(["```", "", "## Next step", "",
+                      "Review the failed gates and candidate errors above. Select one supported change "
+                      "for a new bounded run, or explicitly revise the acceptance budget. "
+                      "Do not treat this rejection as a deployment or silently relax its gates.", "",
+                      f"_Exported {utc_now()} by `localpilot report`._"])
+        return "\n".join(lines) + "\n"
 
     lines.append("## Chosen configuration")
     lines.append("")

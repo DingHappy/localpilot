@@ -5,7 +5,7 @@ import traceback
 import uuid
 from typing import Any, Dict, List, Optional
 
-from localpilot.orchestrator import Orchestrator
+from localpilot.orchestrator import Orchestrator, AutopilotRejected
 from localpilot.utils import utc_now
 
 
@@ -90,6 +90,10 @@ class JobRegistry:
             )
             job.result = result.to_dict()
             job.status = "succeeded"
+        except AutopilotRejected as exc:
+            job.error = str(exc)
+            job.result = exc.run
+            job.status = "failed"
         except Exception as exc:
             job.error = f"{type(exc).__name__}: {exc}"
             job.result = {"traceback": traceback.format_exc(limit=8)}

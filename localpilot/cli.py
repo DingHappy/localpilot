@@ -24,7 +24,7 @@ from localpilot.executor.process import runtime_factory, runtime_names
 from localpilot.hardware.profiler import HardwareProfiler
 from localpilot.intent.parser import parse_intent
 from localpilot.models.registry import ModelRegistry
-from localpilot.orchestrator import Orchestrator, profile_requirements
+from localpilot.orchestrator import Orchestrator, profile_requirements, AutopilotRejected
 from localpilot.planner.planner import Planner
 from localpilot.planner.policies import PolicyEngine
 from localpilot.profiles.store import ProfileStore
@@ -928,6 +928,12 @@ def main(argv=None) -> int:
     args = parser.parse_args(local_argv)
     try:
         return int(args.func(args))
+    except AutopilotRejected as exc:
+        if getattr(args, "json", False):
+            _print_json(exc.run)
+        else:
+            print(f"LocalPilot rejected: {exc}")
+        return 1
     except Exception as exc:
         if getattr(args, "json", False):
             _print_json(
