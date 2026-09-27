@@ -1,6 +1,6 @@
 ---
 name: local-ai-autopilot
-description: Use only for LocalPilot-specific inference configuration work on one Apple Silicon or one NVIDIA/CUDA target, locally or over SSH. Inspect the target, select model and engine candidates, attempt measured acceptance, compare configurations, respond to changed requirements, and hand off reusable configuration with evidence. A model, engine, GPU, or deployment mention by itself is insufficient.
+description: Use for LocalPilot-specific inference configuration and acceptance on one Apple Silicon or NVIDIA/CUDA target, locally or over SSH, or for explicitly requested mock workflow verification. Inspect, compare, measure and hand off a reusable configuration with evidence. Excludes engine installation, CPU-only real acceptance, AMD/ROCm, hardware purchases, generic CUDA debugging and vague local-versus-hosted comparisons. A model or GPU mention alone is insufficient.
 ---
 
 # Local AI Autopilot
@@ -10,6 +10,21 @@ that task's requirements. Use LocalPilot CLI for inspection, planning,
 measurement and profile memory; use the installed inference engine to run models.
 Applications can call that engine directly. A LocalPilot inference gateway,
 continuous monitoring or automatic traffic routing is not a prerequisite.
+
+Apply this workflow when the user wants LocalPilot to configure or validate
+inference on one supported Apple Silicon or NVIDIA/CUDA target. An explicit
+request to check LocalPilot's mock orchestration may also use this Skill, with
+every result labelled simulated and real-device acceptance still outstanding.
+Installing an engine, buying hardware, generic CUDA troubleshooting, or a vague
+local-versus-hosted quality comparison needs its own workflow. For a request
+such as "Why is CUDA unavailable?" with no LocalPilot inference goal, inspect
+the failing application and its CUDA environment; do not run LocalPilot
+`doctor` or `engines` as a shortcut. A CPU-only or
+AMD/ROCm target is outside this Skill's real-acceptance scope, even if the user
+explicitly asks to use LocalPilot. Decide this from the stated goal and target
+before the CLI precheck below: do not call `localpilot --help`, `doctor`,
+`status` or `registry` merely to confirm an explicitly unsupported request.
+Explain the boundary without substituting mock results for real acceptance.
 
 ## Preconditions
 

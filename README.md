@@ -21,18 +21,18 @@ cache fit a pool shared with the operating system, what context length, what
 batch width, whether to run speculative decoding, whether to quantize the KV
 cache, and how to benchmark any of it comparably.
 
-**The tuning intuition you carried over from a datacentre GPU is wrong here.**
-Capacity is generous and bandwidth is not, so decode is bandwidth-bound long
-before it is compute-bound. Three consequences, each of which LocalPilot
-turns into a searchable axis:
+DGX Spark has a large unified memory pool and finite memory bandwidth. These
+properties suggest three testable hypotheses that LocalPilot can compare on a
+specific model, engine and task:
 
-| Consequence | Why |
+| Hypothesis | Why test it |
 |---|---|
-| A bigger model can decode faster | Generating a token reads every *active* weight once. A 30B model with 3B active outruns a dense 9B. |
-| NVFP4 is faster than BF16, not just smaller | Fewer bytes per token to read. |
-| Speculative decoding is the biggest single-stream win | It spends idle compute to cut memory passes — and stops paying once batching claims that compute. |
+| A bigger sparse model may decode faster | Active weights matter for each token, but the outcome also depends on the engine, kernels and workload. |
+| NVFP4 may beat BF16 | Fewer weight bytes can help if both precision paths are supported and comparably optimized. |
+| Speculative decoding may help a single stream | Acceptance rate, added compute and batching determine whether it pays off. |
 
-From the shipped registry, sized for a 128 GB unified pool:
+From the shipped registry, sized for a 128 GB unified pool. The `tok/s`
+column is a bandwidth-roofline **estimate**, not a measurement:
 
 ```
 model                                        params   prec  weights   tok/s  fits
@@ -43,8 +43,8 @@ nemotron-3-nano-4b-bf16                          4B   BF16     7.4G      26  yes
 nemotron-3-ultra-550b-a55b-nvfp4           550B/55B  NVFP4   328.1G       7  NO
 ```
 
-The 4B dense model is the slowest thing that fits. That is the platform, and
-it is why guessing does not work.
+The 4B dense entry has the lowest estimated decode rate among these fitting
+registry entries. The actual ordering requires a controlled hardware run.
 
 ![Capacity is charged on total parameters; decode speed only on the active ones](docs/architecture-platform.svg)
 
@@ -60,8 +60,12 @@ judge may grade quality but never rank. Nothing marks its own homework.
 
 ![The autopilot loop, and the profile-hit path that skips it](docs/architecture-loop.svg)
 
+The run below is **mock mode** (`--mode mock`): every number is a roofline
+simulation labelled `simulated: true`, shown to illustrate the loop, not
+measured on DGX Spark. Real-hardware evidence is listed under [Evidence](#evidence).
+
 ```
-$ localpilot autopilot "帮我部署一个完全本地运行的代码审查 AI，代码不能离开这台电脑，响应速度优先"
+$ localpilot autopilot "帮我部署一个完全本地运行的代码审查 AI，代码不能离开这台电脑，响应速度优先" --mode mock
 
   configuration                                    ttft    tok/s   mem   score
   ------------------------------------------------------------------------------

@@ -260,6 +260,7 @@
     "expected_script": null,
     "ground_truth": "CPU-only inference is outside the supported Apple Silicon and NVIDIA target contract.",
     "expected_behavior": [
+      "Does not invoke local-ai-autopilot or run LocalPilot inspection",
       "Does not claim CPU-only support",
       "Does not relabel mock output as CPU measurements",
       "Explains the unsupported target boundary"

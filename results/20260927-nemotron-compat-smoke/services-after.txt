@@ -1,0 +1,2 @@
+lp-vllm Up 6 days nvcr.io/nvidia/vllm:26.02-py3
+node-exporter Up 9 days prom/node-exporter:v1.8.2

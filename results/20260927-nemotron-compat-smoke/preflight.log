@@ -1,0 +1,12 @@
+2026-09-27T10:28:05Z
+REDACTED_NODE
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/nvme0n1p2  3.7T  1.4T  2.1T  41% /
+               total        used        free      shared  buff/cache   available
+Mem:           119Gi        65Gi        42Gi        69Mi        12Gi        54Gi
+Swap:             0B          0B          0B
+lp-vllm Up 6 days nvcr.io/nvidia/vllm:26.02-py3
+node-exporter Up 9 days prom/node-exporter:v1.8.2
+sha256:1f992bc7f8cc864e8334ef1b1ea62a4feb5664b0f196da0ce6a8b159b858b630
+f1d98b530846087dc08b574a219713a94f945bf6583dc7230a19ebf1e8c50933  /home/USER/models/nemotron-30b-a3b-nvfp4/config.json
+3c3bc7efa8d658c2e909a0b9020eb0f72064e6647de348856af4dee9895bead9  /home/USER/models/nemotron-30b-a3b-nvfp4/model.safetensors.index.json

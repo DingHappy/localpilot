@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import hashlib
 import json
 import os
 import shutil
@@ -49,13 +50,14 @@ if "--version" in args:
 commands = {"doctor", "engines", "registry", "recommend", "autopilot", "stage", "status", "benchmark", "reconcile", "watch", "drain", "activate", "rollback", "resume"}
 command = next((item for item in args if item in commands), "")
 no_accelerator = case == "local-ai-autopilot-pos-no-cuda"
+cpu_only = case == "local-ai-autopilot-neg-cpu-only"
 apple = case in {
     "local-ai-autopilot-pos-apple-local-ollama",
     "local-ai-autopilot-pos-capacity-only",
 }
 simulated = "--simulate" in args or no_accelerator
-platform = "generic" if no_accelerator else ("apple_silicon" if apple else "dgx_spark")
-engine = None if no_accelerator else ("ollama" if apple else "vllm")
+platform = "generic" if no_accelerator or cpu_only else ("apple_silicon" if apple else "dgx_spark")
+engine = None if no_accelerator or cpu_only else ("ollama" if apple else "vllm")
 changed_concurrency = case == "local-ai-autopilot-pos-requirement-change-concurrency"
 changed_modality = case == "local-ai-autopilot-pos-requirement-change-modality"
 context_length = 65536 if changed_concurrency else 8192
@@ -68,9 +70,9 @@ model_id = "fixture-vision" if changed_modality else "fixture-small"
 hardware = {
     "platform_id": platform,
     "simulated": simulated,
-    "real_execution_ready": not no_accelerator,
+    "real_execution_ready": not (no_accelerator or cpu_only),
     "unified_memory": platform in {"apple_silicon", "dgx_spark"},
-    "memory": {"total_gb": 64 if apple else (128 if not no_accelerator else 16)},
+    "memory": {"total_gb": 64 if apple else (16 if no_accelerator or cpu_only else 128)},
     "engines": ({engine: {"available": True}} if engine else {}),
 }
 
@@ -100,7 +102,11 @@ elif command in {"autopilot", "stage"}:
         "rejected": [({"model_id": "fixture-text", "gate": "required_modalities", "reason": "lacks image and document support"} if changed_modality else {"model_id": "fixture-too-large", "gate": "memory", "reason": "requires 348 GB"})],
     }))
 elif command == "status":
-    print(json.dumps({"status": "READY", "profile_key": profile_key, "simulated": simulated}))
+    print(json.dumps(
+        {"status": "NOT_READY", "profile_key": None, "simulated": simulated}
+        if cpu_only else
+        {"status": "READY", "profile_key": profile_key, "simulated": simulated}
+    ))
 elif command == "benchmark":
     print(json.dumps({"simulated": simulated, "ttft_ms": 125, "throughput_tokens_s": 23, "peak_memory_gb": 20, "raw": {"peak_memory_source": "planner_estimate_no_readable_source"}}))
 elif command in {"reconcile", "watch"}:
@@ -427,6 +433,14 @@ def write_evidence_bundle(base: Path, cases: List[dict]) -> None:
 
 def write_manifest(base: Path, cases: List[dict]) -> None:
     version = subprocess.run(["codex", "--version"], capture_output=True, text=True).stdout.strip()
+    skill_entry = SKILL_ROOT / "SKILL.md"
+    skill_status = subprocess.run(
+        ["git", "status", "--short", "--", str(SKILL_ROOT.relative_to(ROOT))],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
     write_json(
         base / "manifest.json",
         {
@@ -437,6 +451,8 @@ def write_manifest(base: Path, cases: List[dict]) -> None:
             "case_ids": [case["id"] for case in cases],
             "dataset": str(DATASET.relative_to(ROOT)),
             "skill_commit": subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, capture_output=True, text=True).stdout.strip(),
+            "skill_entry_sha256": hashlib.sha256(skill_entry.read_bytes()).hexdigest(),
+            "skill_worktree_status": skill_status,
         },
     )
 
