@@ -108,8 +108,10 @@ python3 scripts/install_skill.py install \
 
 The installer also supports `cursor`, `gemini`, `codex`, and `all`. It will
 not overwrite an unmanaged or locally modified Skill directory. It installs
-only the Skill files; install the LocalPilot Python package separately on the
-controller and every execution node, then verify `localpilot --version`.
+only the Skill files. If the CLI is missing, the Skill recommends an isolated
+installation of the LocalPilot Python package on the controller or execution
+node that needs it; an explicit setup request can carry out that installation.
+Then verify `localpilot --version` on each machine.
 
 ### Platform-independent controller and execution targets
 

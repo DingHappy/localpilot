@@ -160,11 +160,12 @@
     "question": "在 ssh://pilot@node 上验收模型；如果节点没有 LocalPilot 就直接告诉我缺什么，不要自动安装。",
     "expected_skill": "local-ai-autopilot",
     "expected_script": null,
-    "ground_truth": "The agent checks the remote CLI and stops with an installation gap instead of silently installing or substituting a local run.",
+    "ground_truth": "The agent checks the remote CLI, recommends isolated installation if it is missing, and stops instead of silently installing or substituting a local run.",
     "expected_behavior": [
       "Invokes local-ai-autopilot",
       "Checks `localpilot --target ssh://pilot@node --version`",
       "Stops when the executable is absent or incompatible",
+      "Recommends isolated CLI installation on the missing node",
       "Does not install software or substitute local evidence"
     ]
   },

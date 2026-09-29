@@ -41,7 +41,13 @@ before using a different major/minor series. Check newer optional commands with
 For an SSH target, verify its CLI with
 `localpilot --target ssh://user@host --version` and add that target to commands
 that should run there. The remote node needs the CLI, not a copy of this Skill.
-If prerequisites are missing, report the gap; do not install them implicitly.
+If the CLI is missing, stop the LocalPilot workflow and recommend the isolated
+installation in [cli.md](references/cli.md#installing-a-missing-cli) on the
+machine that needs it. Explain that installing the Skill alone does not install
+the CLI. Do not download or install the CLI implicitly; if the user asks you to
+set it up, follow the installation steps and verify the CLI before continuing.
+Treat an incompatible version as a compatibility gap, not a reason to overwrite
+the existing installation automatically.
 Read-only interpretation of supplied reports needs no CLI or device connection.
 
 ## Route by user goal

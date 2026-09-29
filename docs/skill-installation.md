@@ -20,13 +20,20 @@ Supported agents are `codex`, `claude-code`, `cursor`, `gemini`, and `all`.
 The installer refuses to overwrite or remove unmanaged or locally modified
 Skill directories.
 
-After installation, verify the separate runtime prerequisite on every target:
+After installation, verify the separate runtime prerequisite on the controller
+and every execution target:
 
 ```bash
 command -v localpilot
 localpilot --version
 localpilot --target ssh://user@host --version
 ```
+
+If a target lacks the CLI, the Skill recommends an isolated installation from
+the project repository using the steps in
+[`references/cli.md`](../skills/local-ai-autopilot/references/cli.md#installing-a-missing-cli).
+It does not silently download or install the CLI. An explicit request to set
+up LocalPilot can proceed through those steps and verify the installed version.
 
 This Skill targets the LocalPilot `0.2.x` CLI contract. A different major or
 minor series requires a compatibility review before the workflow is executed.

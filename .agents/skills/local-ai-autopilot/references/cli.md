@@ -14,6 +14,31 @@ Before the workflow, verify the CLI independently from the Skill files:
     command -v localpilot
     localpilot --version
 
+## Installing a missing CLI
+
+If `command -v localpilot` fails, tell the user which machine is missing the
+CLI and recommend installing the LocalPilot Python package from the project
+repository in a dedicated virtual environment. Do not install it merely
+because a Skill was installed or a read-only report is being interpreted.
+When the user requests setup, use a trusted checkout of
+`https://github.com/DingHappy/localpilot`, inspect its version, and install on
+the missing machine:
+
+    cd /path/to/localpilot-checkout
+    python3 -m venv .venv
+    .venv/bin/python -m pip install .
+    .venv/bin/localpilot --version
+
+Use a compatible `0.2.x` checkout for this Skill. If Python, network access,
+or package installation is unavailable, report that blocker rather than
+substituting a simulated result. The CLI installation does not install an
+inference engine, model weights or GPU drivers.
+
+For a remote target, install in an isolated environment on that node as well.
+Use `--remote-command /absolute/path/to/.venv/bin/localpilot` when the remote
+executable is not on the SSH session's PATH; verify it with `--version` before
+acceptance. Keep existing environments and serving processes unchanged.
+
 ## Execution target
 
 Commands run on the current machine by default. The controller operating
