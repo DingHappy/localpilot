@@ -25,9 +25,9 @@ from typing import Any, Dict, Iterable, List
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SKILL_ROOT = ROOT / ".agents" / "skills" / "local-ai-autopilot"
-DATASET = SKILL_ROOT / "evals" / "evals.json"
-SCORER = SKILL_ROOT / "scripts" / "score_behavior_evals.py"
+SKILL_ROOT = ROOT / "skills" / "local-ai-autopilot"
+DATASET = ROOT / "evals" / "skill" / "evals.json"
+SCORER = ROOT / "scripts" / "score_skill_behavior_evals.py"
 DEFAULT_RUN_ROOT = ROOT / "results" / "skill-behavior-eval-20260921"
 AGENT_MODEL = "gpt-5.6-sol"
 

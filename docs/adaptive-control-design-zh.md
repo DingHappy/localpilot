@@ -319,7 +319,7 @@ localpilot rollback <deployment-id>
 
 ## 参考资料
 
-- LocalPilot Skill：[`SKILL.md`](../.agents/skills/local-ai-autopilot/SKILL.md)
+- LocalPilot Skill：[`SKILL.md`](../skills/local-ai-autopilot/SKILL.md)
 - 产品定位总结：[`product-strategy-summary-zh.md`](product-strategy-summary-zh.md)
 - NVIDIA DGX Spark System Overview：[docs.nvidia.com/dgx/dgx-spark/system-overview.html](https://docs.nvidia.com/dgx/dgx-spark/system-overview.html)
 - NVIDIA DGX Spark Porting Guide：[docs.nvidia.com/dgx/dgx-spark-porting-guide/overview.html](https://docs.nvidia.com/dgx/dgx-spark-porting-guide/overview.html)

@@ -61,8 +61,11 @@ Evidence: [dataset](results/skill-behavior-eval-20260927/dataset.json),
 [with Skill](results/skill-behavior-eval-20260927/with-skill.json),
 [generated score](results/skill-behavior-eval-20260927/score.json), and
 [case traces and judgments](results/skill-behavior-eval-20260927/evidence.jsonl).
-The [evaluation contract](.agents/skills/local-ai-autopilot/references/evaluation.md)
+The [evaluation contract](docs/skill-evaluation.md)
 and [runner](scripts/run_skill_behavior_evals.py) define the gate and method.
+The 2026-09-27 manifest records the dataset's location at run time; it now
+lives at [`evals/skill/evals.json`](evals/skill/evals.json). The committed
+dataset snapshot in the evidence bundle remains unchanged.
 
 The [2026-09-21 result](results/skill-behavior-eval-20260921-handoff/score.json)
 also failed the negative-activation gate, with two false activations. Its

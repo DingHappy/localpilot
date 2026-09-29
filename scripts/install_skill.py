@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List
 
 
+ROOT = Path(__file__).resolve().parents[1]
 SKILL_NAME = "local-ai-autopilot"
 MANIFEST_NAME = ".localpilot-install.json"
 AGENT_PATHS = {
@@ -27,7 +28,11 @@ class InstallError(RuntimeError):
 
 
 def skill_source() -> Path:
-    return Path(__file__).resolve().parents[1]
+    return ROOT / "skills" / SKILL_NAME
+
+
+def _is_project_copy(destination: Path, agent: str) -> bool:
+    return agent == "codex" and destination == ROOT / AGENT_PATHS["codex"] / SKILL_NAME
 
 
 def _included_files(root: Path) -> Iterable[Path]:
@@ -91,14 +96,28 @@ def _destination(target: Path, agent: str) -> Path:
 def status(target: Path, agent: str) -> dict:
     source = skill_source()
     destination = _destination(target, agent)
-    if destination.resolve() == source:
+    if _is_project_copy(destination, agent):
         _validate_skill(source)
+        if not destination.is_dir():
+            return {
+                "agent": agent,
+                "destination": str(destination),
+                "status": "not_installed",
+                "discoverable": False,
+                "modified": [],
+            }
+        source_files = _hashes(source)
+        copy_files = _hashes(destination)
+        changed = sorted(
+            name for name in set(source_files) | set(copy_files)
+            if source_files.get(name) != copy_files.get(name)
+        )
         return {
             "agent": agent,
             "destination": str(destination),
-            "status": "discoverable_source",
+            "status": "modified" if changed else "discoverable_source",
             "discoverable": True,
-            "modified": [],
+            "modified": changed,
         }
     if not destination.exists():
         return {
@@ -131,8 +150,13 @@ def install(target: Path, agent: str, dry_run: bool = False) -> dict:
     source = skill_source()
     _validate_skill(source)
     destination = _destination(target, agent)
-    if destination.resolve() == source:
+    if _is_project_copy(destination, agent):
         result = status(target, agent)
+        if result["status"] != "discoverable_source":
+            raise InstallError(
+                "Project-local Skill is missing or differs from the canonical package; "
+                "run scripts/sync_skill.py --write"
+            )
         result["action"] = "none"
         return result
 
@@ -172,7 +196,7 @@ def install(target: Path, agent: str, dry_run: bool = False) -> dict:
         "schema_version": 1,
         "skill": SKILL_NAME,
         "agent": agent,
-        "source": str(source),
+        "source": "DingHappy/localpilot/skills/local-ai-autopilot",
         "files": files,
     }
     (destination / MANIFEST_NAME).write_text(
@@ -186,7 +210,7 @@ def install(target: Path, agent: str, dry_run: bool = False) -> dict:
 def uninstall(target: Path, agent: str, dry_run: bool = False) -> dict:
     source = skill_source()
     destination = _destination(target, agent)
-    if destination.resolve() == source:
+    if _is_project_copy(destination, agent):
         result = status(target, agent)
         result["action"] = "canonical_preserved"
         return result

@@ -133,7 +133,7 @@ def score(dataset: List[dict], baseline: List[dict], with_skill: List[dict]) -> 
 def main(argv: List[str] | None = None) -> int:
     root = Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", type=Path, default=root / "evals" / "evals.json")
+    parser.add_argument("--dataset", type=Path, default=root / "evals" / "skill" / "evals.json")
     parser.add_argument("--baseline", type=Path, required=True)
     parser.add_argument("--with-skill", type=Path, required=True)
     parser.add_argument("--output", type=Path)

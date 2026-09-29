@@ -7,16 +7,15 @@ from pathlib import Path
 
 SKILL_ROOT = (
     Path(__file__).resolve().parents[1]
-    / ".agents"
-    / "skills"
-    / "local-ai-autopilot"
+    / "evals"
+    / "skill"
 )
 
 
 class SkillEvaluationDatasetTests(unittest.TestCase):
     def setUp(self):
         self.cases = json.loads(
-            (SKILL_ROOT / "evals" / "evals.json").read_text(encoding="utf-8")
+            (SKILL_ROOT / "evals.json").read_text(encoding="utf-8")
         )
 
     def test_dataset_has_unique_positive_and_negative_cases(self):

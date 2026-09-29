@@ -1,0 +1,4 @@
+interface:
+  display_name: "Local AI Autopilot"
+  short_description: "Select, validate and hand off local inference configurations"
+  default_prompt: "Use $local-ai-autopilot to inspect the selected local or SSH target, validate suitable inference configurations, and hand off the engine configuration and request example with measured, estimated and simulated evidence clearly distinguished."

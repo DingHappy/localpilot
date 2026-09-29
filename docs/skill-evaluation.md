@@ -40,7 +40,7 @@ and no implicit model download.
 
 ## Dataset
 
-`../evals/evals.json` follows NVIDIA's Tier-3 task shape: `question`,
+[`evals/skill/evals.json`](../evals/skill/evals.json) follows NVIDIA's Tier-3 task shape: `question`,
 `expected_skill`, `expected_script`, `ground_truth`, and observable
 `expected_behavior`. Keep positive, negative, and difficult boundary cases.
 
@@ -61,7 +61,7 @@ and multi-node boundaries.
 5. Score the reviewed records:
 
 ```bash
-python3 scripts/score_behavior_evals.py \
+python3 scripts/score_skill_behavior_evals.py \
   --baseline /tmp/localpilot-eval/baseline.json \
   --with-skill /tmp/localpilot-eval/with-skill.json \
   --output /tmp/localpilot-eval/score.json

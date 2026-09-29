@@ -7,11 +7,8 @@ from pathlib import Path
 
 SCRIPT = (
     Path(__file__).resolve().parents[1]
-    / ".agents"
-    / "skills"
-    / "local-ai-autopilot"
     / "scripts"
-    / "score_behavior_evals.py"
+    / "score_skill_behavior_evals.py"
 )
 SPEC = importlib.util.spec_from_file_location("localpilot_behavior_eval", SCRIPT)
 scorer = importlib.util.module_from_spec(SPEC)

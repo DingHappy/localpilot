@@ -464,8 +464,8 @@ Planner、Bench、Judge 的职责划分是合理架构，但 Agent 数量本身�
 
 ## 参考资料
 
-- LocalPilot Skill：[`SKILL.md`](../.agents/skills/local-ai-autopilot/SKILL.md)
-- CLI 合约：[`cli.md`](../.agents/skills/local-ai-autopilot/references/cli.md)
+- LocalPilot Skill：[`SKILL.md`](../skills/local-ai-autopilot/SKILL.md)
+- CLI 合约：[`cli.md`](../skills/local-ai-autopilot/references/cli.md)
 - 最新真实票据字段报告：[`results/20260921T130219-real-vision-quality.md`](../results/20260921T130219-real-vision-quality.md)
 - 票据验收结论：[`results/20260921-document-field-validation.md`](../results/20260921-document-field-validation.md)
 - 真实图片链路报告：[`results/20260921T124614-real-vision-quality.md`](../results/20260921T124614-real-vision-quality.md)

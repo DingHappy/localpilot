@@ -4,10 +4,13 @@
 the engine, the precision and the serving configuration, measures the
 candidates against each other on your machine, and remembers the winner.
 
-Built for Apple Silicon, NVIDIA DGX Spark and other CUDA targets, and shipped with an
-[Agent Skill](.agents/skills/local-ai-autopilot/SKILL.md) so a coding agent can
-drive the whole loop. See the [Agent behavior benchmark](BENCHMARK.md) for the
-current baseline-versus-Skill result and its remaining discovery failure.
+Built for Apple Silicon, NVIDIA DGX Spark and other CUDA targets. The
+[standalone Agent Skill](skills/local-ai-autopilot/SKILL.md) lets a coding agent
+drive the loop. In Codex, use `$skill-installer` with
+`https://github.com/DingHappy/localpilot/tree/main/skills/local-ai-autopilot`
+to install that folder directly. The Skill needs the separate LocalPilot CLI;
+see [installation](docs/skill-installation.md) and the
+[Agent behavior benchmark](BENCHMARK.md), including its remaining discovery failure.
 
 ## The problem
 
@@ -92,12 +95,14 @@ request is a lookup; a changed requirement triggers a new search.**
 
 ## Quick start
 
-Codex discovers the project-local Skill directly from `.agents/skills/`.
-Verify it, or install the same canonical Skill for another supported agent:
+The installable package is `skills/local-ai-autopilot/`. Codex discovers its
+checked project-local copy in `.agents/skills/`. Verify that they match, or
+install the package for another supported agent:
 
 ```bash
-python3 .agents/skills/local-ai-autopilot/scripts/install.py status --json
-python3 .agents/skills/local-ai-autopilot/scripts/install.py install \
+python3 scripts/sync_skill.py
+python3 scripts/install_skill.py status --json
+python3 scripts/install_skill.py install \
     --agent claude-code --target .
 ```
 
@@ -216,7 +221,7 @@ localpilot demo          the A/B story
 ```
 
 `--json` everywhere output is meant to be parsed.
-[`references/cli.md`](.agents/skills/local-ai-autopilot/references/cli.md) is the
+[`references/cli.md`](skills/local-ai-autopilot/references/cli.md) is the
 full contract.
 
 The default deliverable is an engine configuration, a direct-engine request
@@ -224,25 +229,25 @@ example, and acceptance evidence. Applications can call vLLM or Ollama directly.
 The existing `serve`, `reconcile`, `watch`, `drain`, `activate`, `rollback`,
 `resume` and `stop` commands remain auxiliary features; they are not prerequisites
 for configuration handoff. Their contract is in
-[optional service management](.agents/skills/local-ai-autopilot/references/service-management.md).
+[optional service management](skills/local-ai-autopilot/references/service-management.md).
 
 ## The Agent Skill
 
-`.agents/skills/local-ai-autopilot/` is the decision and memory layer for a
+`skills/local-ai-autopilot/` is the installable decision and memory layer for a
 coding agent. It can **compose with** specialised NVIDIA, Jetson, or engine
 troubleshooting Skills when a matching Skill is discoverable in the current
 Agent environment. Otherwise it preserves the evidence, reports the boundary,
 and gives the next concrete step instead of assuming that dependency exists.
 The optional routing contract lives in
-[`references/composition.md`](.agents/skills/local-ai-autopilot/references/composition.md).
+[`references/composition.md`](skills/local-ai-autopilot/references/composition.md).
 
 The Skill guides target inspection, candidate selection, task acceptance and
 configuration handoff. It uses explicit quality/time gates, deterministic field
 checks or separately identified rubric evidence, and bounded comparisons when
 needed. Saved configurations may be reused only while their requirements and
 acceptance evidence remain valid. See
-[optimization](.agents/skills/local-ai-autopilot/references/optimization.md) and
-[handoff](.agents/skills/local-ai-autopilot/references/handoff.md).
+[optimization](skills/local-ai-autopilot/references/optimization.md) and
+[handoff](skills/local-ai-autopilot/references/handoff.md).
 
 A runnable [document extraction handoff](examples/document-extraction/README.md)
 shows how an application calls vLLM directly with the validated prompt and JSON

@@ -52,7 +52,7 @@
 <!-- ============ THIS SKILL ============ -->
 <rect class="card-accent" x="48" y="176" width="792" height="286" rx="10"/>
 <text class="eyebrow" x="68" y="202">THIS SKILL</text>
-<text class="mod"     x="152" y="202">.agents/skills/local-ai-autopilot</text>
+<text class="mod"     x="152" y="202">skills/local-ai-autopilot</text>
 <text class="title"   x="68" y="226">Decide · measure · grade · rank · remember</text>
 
 <rect class="card-sub" x="68" y="240" width="752" height="38" rx="7"/>

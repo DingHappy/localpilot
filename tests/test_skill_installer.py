@@ -8,11 +8,8 @@ from pathlib import Path
 
 SCRIPT = (
     Path(__file__).resolve().parents[1]
-    / ".agents"
-    / "skills"
-    / "local-ai-autopilot"
     / "scripts"
-    / "install.py"
+    / "install_skill.py"
 )
 SPEC = importlib.util.spec_from_file_location("localpilot_skill_installer", SCRIPT)
 installer = importlib.util.module_from_spec(SPEC)
@@ -28,19 +25,15 @@ class SkillInstallerTests(unittest.TestCase):
             self.assertEqual("installed", installed["status"])
             self.assertTrue(installed["discoverable"])
             destination = target / ".claude" / "skills" / installer.SKILL_NAME
-            self.assertTrue((destination / "evals" / "evals.json").is_file())
+            self.assertTrue((destination / "SKILL.md").is_file())
             self.assertTrue(
-                (destination / "references" / "evaluation.md").is_file()
+                (destination / "references" / "evidence.md").is_file()
             )
             self.assertTrue(
                 (destination / "references" / "composition.md").is_file()
             )
-            self.assertTrue(
-                (destination / "references" / "installation.md").is_file()
-            )
-            self.assertTrue(
-                (destination / "scripts" / "score_behavior_evals.py").is_file()
-            )
+            self.assertFalse((destination / "evals").exists())
+            self.assertFalse((destination / "scripts").exists())
 
             state = installer.status(target, "claude-code")
             self.assertEqual("installed", state["status"])
@@ -82,6 +75,12 @@ class SkillInstallerTests(unittest.TestCase):
         removed = installer.uninstall(repository, "codex")
         self.assertEqual("canonical_preserved", removed["action"])
         self.assertTrue(removed["discoverable"])
+
+    def test_project_copy_matches_installable_package(self):
+        repository = Path(__file__).resolve().parents[1]
+        package = repository / "skills" / installer.SKILL_NAME
+        project_copy = repository / ".agents" / "skills" / installer.SKILL_NAME
+        self.assertEqual(installer._hashes(package), installer._hashes(project_copy))
 
 
 if __name__ == "__main__":
