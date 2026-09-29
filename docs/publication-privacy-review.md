@@ -20,8 +20,9 @@ It does not certify that arbitrary future result files are safe to commit.
 - The GB10 compatibility log replaces the assigned node label and home
   directory username. It contains model/config hashes and the failed startup
   trace, not SSH credentials or a model weight file.
-- The public history has 36 commits. Author and committer metadata use the
-  DingHappy GitHub noreply address. The personal username, personal email and
+- The public history preserves the development commits and adds privacy
+  cleanup and review. Author and committer metadata use the DingHappy GitHub
+  noreply address. The personal username, personal email and
   assigned node label were removed from reachable historical blobs and
   commit metadata. This changes commit hashes; hashes recorded in old reports
   identify the pre-publication local history and may not resolve here.
