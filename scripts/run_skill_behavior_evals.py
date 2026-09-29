@@ -192,7 +192,7 @@ def fixture_files(workspace: Path, case: dict) -> None:
         zipapp.create_archive(
             source,
             target=stub,
-            interpreter="/Users/REDACTED_USER/miniforge3/bin/python3.14",
+            interpreter=sys.executable,
         )
     if case["id"] == "local-ai-autopilot-pos-existing-report-read-only":
         write_json(

@@ -17,7 +17,7 @@
 
 现有记录是附着既有服务完成的，`managed_by_localpilot=false`、`launch_command=null`。交付方式是接入该服务；资料不足以提供已经验证的重建启动命令、权重路径或服务管理命令。
 
-直接交付整个 [examples/document-extraction 目录](/Users/REDACTED_USER/personal_project/localpilot/examples/document-extraction/README.md)，保留其中的 `extract.py`、`prompt.txt` 和 `response-format.json`。开发者在推理节点的项目根目录执行：
+直接交付整个 [examples/document-extraction 目录](../examples/document-extraction/README.md)，保留其中的 `extract.py`、`prompt.txt` 和 `response-format.json`。开发者在推理节点的项目根目录执行：
 
 ```bash
 python3 examples/document-extraction/extract.py /path/to/invoice.png \
@@ -64,9 +64,9 @@ python3 examples/document-extraction/extract.py /path/to/invoice.png \
 
 保留以下原始文件作为交付附件：
 
-- [输出策略配对](/Users/REDACTED_USER/personal_project/localpilot/results/20260921-output-strategy-pair.json)：选择 `json_schema`；门槛为所有文档精确匹配、无失败或截断，并要求至少 10% 收益。数据 SHA-256：`470ed604b75f5b9e5643b6a2c83a1b057c8e786f194d4fdee5c7d4d5893b1157`。
-- [留出验收](/Users/REDACTED_USER/personal_project/localpilot/results/20260921-schema-holdout.json)：`ACCEPTED`，同样要求所有文档精确匹配、无失败或截断。数据 SHA-256：`572c63381a11c546643749bfdd7066adf64ee0311e182d4ebf18749115751621`。
-- [Profile 验收](/Users/REDACTED_USER/personal_project/localpilot/results/20260921T134910-real-vision-quality.json)：run ID `d4e95a9e-20cc-4d6f-8ee7-9ce61b7f2e3a`，Profile `52b256d0a4915bbff292`；门槛 `min_quality=1.0`，目标 `fastest_complete`；benchmark SHA-256：`c3d03eabe15fcb8f844af80bdac9d9aba012e58bbb9b2c3b4bff713df61c9092`。
+- [输出策略配对](20260921-output-strategy-pair.json)：选择 `json_schema`；门槛为所有文档精确匹配、无失败或截断，并要求至少 10% 收益。数据 SHA-256：`470ed604b75f5b9e5643b6a2c83a1b057c8e786f194d4fdee5c7d4d5893b1157`。
+- [留出验收](20260921-schema-holdout.json)：`ACCEPTED`，同样要求所有文档精确匹配、无失败或截断。数据 SHA-256：`572c63381a11c546643749bfdd7066adf64ee0311e182d4ebf18749115751621`。
+- [Profile 验收](20260921T134910-real-vision-quality.json)：run ID `d4e95a9e-20cc-4d6f-8ee7-9ce61b7f2e3a`，Profile `52b256d0a4915bbff292`；门槛 `min_quality=1.0`，目标 `fastest_complete`；benchmark SHA-256：`c3d03eabe15fcb8f844af80bdac9d9aba012e58bbb9b2c3b4bff713df61c9092`。
 
 配对及留出报告引用的 baseline run ID 均为 `b5073210-b185-4d45-a6ce-6a016ae02c8b`，各自还保存完整配置哈希。更改模型、引擎、提示词、字段、输出预算、并发、任务数据或验收政策后，应重新验收。
 
